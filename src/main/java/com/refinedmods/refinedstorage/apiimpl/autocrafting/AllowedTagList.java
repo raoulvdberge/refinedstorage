@@ -22,8 +22,8 @@ public class AllowedTagList {
     @Nullable
     private final Runnable listener;
 
-    public AllowedTagList(@Nullable Runnable listener) {
-        for (int i = 0; i < 9; ++i) {
+    public AllowedTagList(@Nullable Runnable listener, int size) {
+        for (int i = 0; i < size; ++i) {
             allowedItemTags.add(new HashSet<>());
             allowedFluidTags.add(new HashSet<>());
         }

@@ -125,23 +125,23 @@ public class GridProcessingTransferMessage {
     }
 
     private static void clearInputsAndOutputs(BaseItemHandler handler) {
-        for (int i = 0; i < 9 * 2; ++i) {
+        for (int i = 0; i < handler.getSlots(); ++i) {
             handler.setStackInSlot(i, ItemStack.EMPTY);
         }
     }
 
     private static void clearInputsAndOutputs(FluidInventory handler) {
-        for (int i = 0; i < 9 * 2; ++i) {
+        for (int i = 0; i < handler.getSlots(); ++i) {
             handler.setFluid(i, FluidStack.EMPTY);
         }
     }
 
     private static void setInputs(BaseItemHandler handler, Collection<ItemStack> stacks) {
-        setSlots(handler, stacks, 0, 9);
+        setSlots(handler, stacks, 0, handler.getSlots()/2);
     }
 
     private static void setOutputs(BaseItemHandler handler, Collection<ItemStack> stacks) {
-        setSlots(handler, stacks, 9, 18);
+        setSlots(handler, stacks, handler.getSlots()/2, handler.getSlots());
     }
 
     private static void setSlots(BaseItemHandler handler, Collection<ItemStack> stacks, int begin, int end) {
@@ -157,11 +157,11 @@ public class GridProcessingTransferMessage {
     }
 
     private static void setFluidInputs(FluidInventory inventory, Collection<FluidStack> stacks) {
-        setFluidSlots(inventory, stacks, 0, 9);
+        setFluidSlots(inventory, stacks, 0, inventory.getSlots()/2);
     }
 
     private static void setFluidOutputs(FluidInventory inventory, Collection<FluidStack> stacks) {
-        setFluidSlots(inventory, stacks, 9, 18);
+        setFluidSlots(inventory, stacks, inventory.getSlots()/2, inventory.getSlots());
     }
 
     private static void setFluidSlots(FluidInventory inventory, Collection<FluidStack> stacks, int begin, int end) {

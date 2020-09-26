@@ -8,6 +8,7 @@ import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPatternProvider;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.AllowedTagList;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.CraftingPattern;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.CraftingPatternFactory;
+import com.refinedmods.refinedstorage.apiimpl.network.node.GridNetworkNode;
 import com.refinedmods.refinedstorage.render.Styles;
 import com.refinedmods.refinedstorage.render.tesr.PatternItemStackTileRenderer;
 import com.refinedmods.refinedstorage.util.RenderUtils;
@@ -261,7 +262,7 @@ public class PatternItem extends Item implements ICraftingPatternProvider {
             return null;
         }
 
-        AllowedTagList allowedTagList = new AllowedTagList(null);
+        AllowedTagList allowedTagList = new AllowedTagList(null, GridNetworkNode.PROCESSING_MATRIX_SIZE);
 
         allowedTagList.readFromNbt(pattern.getTag().getCompound(NBT_ALLOWED_TAGS));
 

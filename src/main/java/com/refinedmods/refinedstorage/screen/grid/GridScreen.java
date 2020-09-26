@@ -25,6 +25,7 @@ import com.refinedmods.refinedstorage.screen.widget.ScrollbarWidget;
 import com.refinedmods.refinedstorage.screen.widget.SearchWidget;
 import com.refinedmods.refinedstorage.screen.widget.TabListWidget;
 import com.refinedmods.refinedstorage.screen.widget.sidebutton.*;
+import com.refinedmods.refinedstorage.tile.config.IType;
 import com.refinedmods.refinedstorage.tile.data.TileDataManager;
 import com.refinedmods.refinedstorage.tile.grid.GridTile;
 import com.refinedmods.refinedstorage.tile.grid.portable.IPortableGrid;
@@ -54,6 +55,7 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
     private CheckboxWidget processingPattern;
 
     private ScrollbarWidget scrollbar;
+    private ScrollbarWidget patternScrollbar;
 
     private final IGrid grid;
     private final TabListWidget tabs;
@@ -61,7 +63,12 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
     private boolean wasConnected;
     private boolean doSort;
 
+    private final int patternScrollOffsetAbsoluteMax = GridNetworkNode.PROCESSING_MATRIX_SIZE / 3 - 3;
+
     private int slotNumber;
+    private int patternScrollOffset;
+    private int patternScrollOffsetMax;
+    private boolean updatePatternOffset;
 
     public GridScreen(GridContainer container, IGrid grid, PlayerInventory inventory, ITextComponent title) {
         super(container, 227, 0, inventory, title);
@@ -81,6 +88,12 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
                 grid.onTabPageChanged(page);
             }
         });
+
+        if (grid instanceof GridNetworkNode && grid.getGridType() == GridType.PATTERN) {
+            GridNetworkNode node = (GridNetworkNode) grid;
+            node.getProcessingMatrix().addListener((handler, slot, reading) -> updatePatternOffset = true);
+            node.getProcessingMatrixFluids().addListener((handler, slot, reading) -> updatePatternOffset = true);
+        }
     }
 
     @Override
@@ -133,12 +146,24 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
         addSideButton(new GridSizeSideButton(this, () -> grid.getSize(), size -> grid.onSizeChanged(size)));
 
         if (grid.getGridType() == GridType.PATTERN) {
+            patternScrollbar = new ScrollbarWidget(this, 160, getTopHeight() + getVisibleRows() * 18 + 4, 6, 18 * 3 - 2, true);
+
+            patternScrollbar.setMaxOffset(patternScrollOffsetAbsoluteMax);
+            patternScrollbar.setOffset(patternScrollOffset); // keep offset when changing between fluid and item view
+
+            container.updatePatternSlotPositions(patternScrollOffset);
+            patternScrollbar.addListener((oldOffset, newOffset) -> {
+                patternScrollOffset = newOffset;
+                container.updatePatternSlotPositions(newOffset);
+            });
+
             processingPattern = addCheckBox(x + 7, y + getTopHeight() + (getVisibleRows() * 18) + 60, new TranslationTextComponent("misc.refinedstorage.processing"), GridTile.PROCESSING_PATTERN.getValue(), btn -> {
                 // Rebuild the inventory slots before the slot change packet arrives.
                 GridTile.PROCESSING_PATTERN.setValue(false, processingPattern.isChecked());
                 ((GridNetworkNode) grid).clearMatrix(); // The server does this but let's do it earlier so the client doesn't notice.
                 this.container.initSlots();
 
+                patternScrollOffset = 0; // reset offset when switching between crafting and processing
                 TileDataManager.setParameter(GridTile.PROCESSING_PATTERN, processingPattern.isChecked());
             });
 
@@ -150,9 +175,18 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
                     GridTile.EXACT_PATTERN.getValue(),
                     btn -> TileDataManager.setParameter(GridTile.EXACT_PATTERN, exactPattern.isChecked())
                 );
+                patternScrollbar.setEnabled(false);
+            } else {
+                patternScrollbar.setEnabled(true);
             }
 
-            addSideButton(new TypeSideButton(this, GridTile.PROCESSING_TYPE));
+            addSideButton(new TypeSideButton(this, GridTile.PROCESSING_TYPE) {
+                @Override
+                public void onPress() {
+                    super.onPress();
+                    updatePatternOffsetMax(GridTile.PROCESSING_TYPE.getValue() != IType.ITEMS);
+                }
+            });
         }
 
         updateScrollbar();
@@ -176,6 +210,11 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
             wasConnected = grid.isGridActive();
 
             view.sort();
+        }
+
+        if (updatePatternOffset) {
+            updatePatternOffsetMax(GridTile.PROCESSING_TYPE.getValue() == IType.ITEMS);
+            updatePatternOffset = false;
         }
 
         if (isKeyDown(RSKeyBindings.CLEAR_GRID_CRAFTING_MATRIX)) {
@@ -331,6 +370,10 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
             }
 
             blit(matrixStack, x + 172, y + getTopHeight() + (getVisibleRows() * 18) + 22, 240, ty * 16, 16, 16);
+            if (processingPattern.isChecked()) {
+                updatePatternScrollbar();
+                patternScrollbar.render(matrixStack);
+            }
         }
 
         tabs.drawForeground(matrixStack, x, y - tabs.getHeight(), mouseX, mouseY, true);
@@ -433,7 +476,9 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
         if (scrollbar.mouseClicked(mouseX, mouseY, clickedButton)) {
             return true;
         }
-
+        if (grid.getGridType() == GridType.PATTERN && patternScrollbar.mouseClicked(mouseX, mouseY, clickedButton)) {
+            return true;
+        }
         if (RS.CLIENT_CONFIG.getGrid().getPreventSortingWhileShiftIsDown()) {
             doSort = !isOverSlotArea(mouseX - guiLeft, mouseY - guiTop) && !isOverCraftingOutputArea(mouseX - guiLeft, mouseY - guiTop);
         }
@@ -518,17 +563,30 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
     public void mouseMoved(double mx, double my) {
         scrollbar.mouseMoved(mx, my);
 
+        if (grid.getGridType() == GridType.PATTERN) {
+            patternScrollbar.mouseMoved(mx, my);
+        }
         super.mouseMoved(mx, my);
     }
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
+        if (grid.getGridType() == GridType.PATTERN && patternScrollbar.mouseReleased(mx, my, button)) {
+            return true;
+        }
         return scrollbar.mouseReleased(mx, my, button) || super.mouseReleased(mx, my, button);
     }
 
     @Override
     public boolean mouseScrolled(double x, double y, double delta) {
+        if (grid.getGridType() == GridType.PATTERN && isOverPatternArea(x - guiLeft, y - guiTop) && patternScrollbar.mouseScrolled(x, y, delta)) {
+            return true;
+        }
         return this.scrollbar.mouseScrolled(x, y, delta) || super.mouseScrolled(x, y, delta);
+    }
+
+    private boolean isOverPatternArea(double x, double y) {
+        return RenderUtils.inBounds(8, getTopHeight() + getVisibleRows() * 18, 152, 54, x, y);
     }
 
     @Override
@@ -573,6 +631,55 @@ public class GridScreen extends BaseScreen<GridContainer> implements IScreenInfo
     public void updateExactPattern(boolean checked) {
         if (exactPattern != null) {
             exactPattern.setChecked(checked);
+        }
+    }
+
+    //check processing matrix and update maximum offset depending on contents
+    private void updatePatternOffsetMax(boolean isItems) {
+        int filledInputSlots = 0;
+        int filledOutputSlots = 0;
+        int lastFilledInputSlot = 0;
+        int lastFilledOutputSlot = 0;
+
+        for (int i = 0; i < GridNetworkNode.PROCESSING_MATRIX_SIZE * 2; i++) {
+            if (!isMatrixSlotEmpty(isItems, i)) {
+                if (i > GridNetworkNode.PROCESSING_MATRIX_SIZE - 1) {
+                    filledOutputSlots++;
+                    lastFilledOutputSlot = i - GridNetworkNode.PROCESSING_MATRIX_SIZE - 1;
+                } else {
+                    filledInputSlots++;
+                    lastFilledInputSlot = i;
+                }
+
+            }
+        }
+
+        int maxFilledSlots = Math.max(filledInputSlots, filledOutputSlots);
+        int maxLastFilledSlot = Math.max(lastFilledInputSlot, lastFilledOutputSlot);
+
+        // offset calculation to show next row if 4 of 9 slots are filled.
+        int filledSlotOffset = Math.floorDiv(maxFilledSlots - 1, 3);
+        // offset to show the last item in the matrix
+        int lastSlotOffset = Math.floorDiv(maxLastFilledSlot, 3) - 2;
+
+        patternScrollOffsetMax = Math.max(filledSlotOffset, lastSlotOffset);
+    }
+
+    private boolean isMatrixSlotEmpty(boolean isItems, int slotNumber) {
+        if (isItems) {
+            return ((GridNetworkNode) grid).getProcessingMatrix().getStackInSlot(slotNumber).isEmpty();
+        } else {
+            return ((GridNetworkNode) grid).getProcessingMatrixFluids().getFluid(slotNumber).isEmpty();
+        }
+    }
+
+    public void updatePatternScrollbar() {
+        patternScrollbar.setEnabled(processingPattern.isChecked() && patternScrollOffsetMax > 0);
+        int oldOffset = patternScrollbar.getOffset();
+        patternScrollbar.setMaxOffset(Math.min(patternScrollOffsetMax, patternScrollOffsetAbsoluteMax));
+
+        if (oldOffset != patternScrollbar.getOffset()) {
+            container.updatePatternSlotPositions(patternScrollbar.getOffset());
         }
     }
 

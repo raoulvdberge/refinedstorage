@@ -29,6 +29,8 @@ import net.minecraft.network.play.server.SSetSlotPacket;
 import net.minecraftforge.items.SlotItemHandler;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GridContainer extends BaseContainer implements ICraftingGridListener {
     private final IGrid grid;
@@ -38,6 +40,9 @@ public class GridContainer extends BaseContainer implements ICraftingGridListene
 
     private ResultCraftingGridSlot craftingResultSlot;
     private LegacyBaseSlot patternResultSlot;
+    private List<Slot> itemPatternSlots = new ArrayList<>();
+    private List<Slot> fluidPatternSlots = new ArrayList<>();
+    private int patternScrollOffset;
 
     public GridContainer(IGrid grid, @Nullable BaseTile gridTile, PlayerEntity player, int windowId) {
         super(RSContainers.GRID, gridTile, player, windowId);
@@ -162,6 +167,8 @@ public class GridContainer extends BaseContainer implements ICraftingGridListene
     }
 
     private void addPatternSlots() {
+        itemPatternSlots.clear();
+        fluidPatternSlots.clear();
         int headerAndSlots = screenInfoProvider.getTopHeight() + (screenInfoProvider.getVisibleRows() * 18);
 
         addSlot(new SlotItemHandler(((GridNetworkNode) grid).getPatterns(), 0, 172, headerAndSlots + 4));
@@ -174,25 +181,28 @@ public class GridContainer extends BaseContainer implements ICraftingGridListene
         int x = ox;
         int y = headerAndSlots + 4;
 
-        for (int i = 0; i < 9 * 2; ++i) {
+        for (int i = 0; i < GridNetworkNode.PROCESSING_MATRIX_SIZE * 2; ++i) {
             int itemFilterSlotConfig = FilterSlot.FILTER_ALLOW_SIZE;
-            if (i < 9) {
+            if (i < GridNetworkNode.PROCESSING_MATRIX_SIZE) {
                 itemFilterSlotConfig |= FilterSlot.FILTER_ALLOW_ALTERNATIVES;
             }
 
             int fluidFilterSlotConfig = FluidFilterSlot.FILTER_ALLOW_SIZE;
-            if (i < 9) {
+            if (i < GridNetworkNode.PROCESSING_MATRIX_SIZE) {
                 fluidFilterSlotConfig |= FluidFilterSlot.FILTER_ALLOW_ALTERNATIVES;
             }
 
-            addSlot(new FilterSlot(((GridNetworkNode) grid).getProcessingMatrix(), i, x, y, itemFilterSlotConfig).setEnableHandler(() -> ((GridNetworkNode) grid).isProcessingPattern() && ((GridNetworkNode) grid).getType() == IType.ITEMS));
-            addSlot(new FluidFilterSlot(((GridNetworkNode) grid).getProcessingMatrixFluids(), i, x, y, fluidFilterSlotConfig).setEnableHandler(() -> ((GridNetworkNode) grid).isProcessingPattern() && ((GridNetworkNode) grid).getType() == IType.FLUIDS));
+            int finalI = i;
+            itemPatternSlots.add(addSlot(new FilterSlot(((GridNetworkNode) grid).getProcessingMatrix(), i, x, y, itemFilterSlotConfig)
+                .setEnableHandler(() -> ((GridNetworkNode) grid).isProcessingPattern() && ((GridNetworkNode) grid).getType() == IType.ITEMS && isVisible(finalI))));
+            fluidPatternSlots.add(addSlot(new FluidFilterSlot(((GridNetworkNode) grid).getProcessingMatrixFluids(), i, x, y, fluidFilterSlotConfig)
+                .setEnableHandler(() -> ((GridNetworkNode) grid).isProcessingPattern() && ((GridNetworkNode) grid).getType() == IType.FLUIDS && isVisible(finalI))));
 
             x += 18;
 
             if ((i + 1) % 3 == 0) {
-                if (i == 8) {
-                    ox = 98;
+                if (i == GridNetworkNode.PROCESSING_MATRIX_SIZE - 1) {
+                    ox = 93;
                     x = ox;
                     y = headerAndSlots + 4;
                 } else {
@@ -218,6 +228,14 @@ public class GridContainer extends BaseContainer implements ICraftingGridListene
         }
 
         addSlot(patternResultSlot = (new LegacyDisabledSlot(grid.getCraftingResult(), 0, 134, headerAndSlots + 22).setEnableHandler(() -> !((GridNetworkNode) grid).isProcessingPattern())));
+    }
+
+    private boolean isVisible(int slotNumber) {
+        return (slotNumber >= patternScrollOffset * 3
+            && slotNumber < patternScrollOffset * 3 + 9)
+
+            || (slotNumber >= patternScrollOffset * 3 + GridNetworkNode.PROCESSING_MATRIX_SIZE
+            && slotNumber < patternScrollOffset * 3 + GridNetworkNode.PROCESSING_MATRIX_SIZE + 9);
     }
 
     public IGrid getGrid() {
@@ -291,5 +309,26 @@ public class GridContainer extends BaseContainer implements ICraftingGridListene
     @Override
     protected int getDisabledSlotNumber() {
         return grid.getSlotId();
+    }
+
+    public void updatePatternSlotPositions(int newOffset) {
+        patternScrollOffset = newOffset;
+        int yPosition = screenInfoProvider.getTopHeight() + (screenInfoProvider.getVisibleRows() * 18) + 4;
+        int originalYPosition = yPosition;
+
+        for (int i = 0; i < itemPatternSlots.size(); i++) {
+
+            if (i == GridNetworkNode.PROCESSING_MATRIX_SIZE) { // reset when reaching output slots
+                yPosition = originalYPosition;
+            }
+
+            if (isVisible(i)) {
+                itemPatternSlots.get(i).yPos = yPosition;
+                fluidPatternSlots.get(i).yPos = yPosition;
+                if ((i + 1) % 3 == 0) {
+                    yPosition += 18;
+                }
+            }
+        }
     }
 }

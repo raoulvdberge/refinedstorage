@@ -1,6 +1,7 @@
 package com.refinedmods.refinedstorage.apiimpl.autocrafting;
 
 import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPatternContainer;
+import com.refinedmods.refinedstorage.apiimpl.network.node.GridNetworkNode;
 import com.refinedmods.refinedstorage.item.PatternItem;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.inventory.CraftingInventory;
@@ -39,7 +40,7 @@ public class CraftingPatternFactory {
 
         try {
             if (processing) {
-                for (int i = 0; i < 9; ++i) {
+                for (int i = 0; i < GridNetworkNode.PROCESSING_MATRIX_SIZE; ++i) {
                     fillProcessingInputs(i, stack, inputs, outputs, allowedTagList);
                     fillProcessingFluidInputs(i, stack, fluidInputs, fluidOutputs, allowedTagList);
                 }
