@@ -12,6 +12,7 @@ import com.refinedmods.refinedstorage.api.util.IStackList;
 import com.refinedmods.refinedstorage.apiimpl.API;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.CraftingPatternInputs;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.CraftingTask;
+import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.Ingredient;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.node.CraftingNode;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.node.Node;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.node.NodeList;
@@ -111,7 +112,7 @@ public class CraftingCalculator {
 
         CraftingPatternInputs inputs = new CraftingPatternInputs(pattern);
 
-        Node node = nodes.createOrAddToExistingNode(pattern, root, inputs.getRecipe(), qty);
+        Node node = nodes.createOrAddToExistingNode(pattern, root, inputs, qty);
 
         calculateForItems(qty, storageSource, fluidStorageSource, results, fluidResults, itemsToExtract, inputs, node);
 
@@ -149,7 +150,7 @@ public class CraftingCalculator {
                                    Node node) throws CraftingCalculatorException {
         int ingredientNumber = -1;
 
-        for (CraftingPatternInputs.Ingredient<ItemStack> ingredient : inputs.getItemIngredients()) {
+        for (Ingredient<ItemStack> ingredient : inputs.getItemIngredients()) {
             ingredientNumber++;
 
             PossibleInputs<ItemStack> possibleInputs = new PossibleInputs<>(ingredient.getInputs());
@@ -247,7 +248,7 @@ public class CraftingCalculator {
                                     ProcessingNode node) throws CraftingCalculatorException {
         int ingredientNumber = -1;
 
-        for (CraftingPatternInputs.Ingredient<FluidStack> ingredient : inputs.getFluidIngredients()) {
+        for (Ingredient<FluidStack> ingredient : inputs.getFluidIngredients()) {
             ingredientNumber++;
 
             PossibleInputs<FluidStack> possibleInputs = new PossibleInputs<>(ingredient.getInputs());

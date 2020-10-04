@@ -6,8 +6,8 @@ import com.refinedmods.refinedstorage.api.util.Action;
 import com.refinedmods.refinedstorage.api.util.IComparer;
 import com.refinedmods.refinedstorage.api.util.IStackList;
 import com.refinedmods.refinedstorage.api.util.StackListEntry;
-import com.refinedmods.refinedstorage.apiimpl.API;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.NonNullList;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
@@ -24,60 +24,66 @@ public final class IoUtil {
 
     private static final int DEFAULT_EXTRACT_FLAGS = IComparer.COMPARE_NBT;
 
-    public static IStackList<ItemStack> extractFromInternalItemStorage(IStackList<ItemStack> list, IStorageDisk<ItemStack> storage, Action action) {
-        IStackList<ItemStack> extracted = API.instance().createItemStackList();
+    public static Map<Integer, Queue<ItemStack>> extractFromInternalItemStorage(Map<Integer, IStackList<ItemStack>> stacks, IStorageDisk<ItemStack> storage, Action action) {
+        Map<Integer, Queue<ItemStack>> extracted = new HashMap<>();
+        for (Map.Entry<Integer, IStackList<ItemStack>> entry : stacks.entrySet()) {
+            Queue<ItemStack> queue = new ArrayDeque<>();
+            for (StackListEntry<ItemStack> listEntry : entry.getValue().getStacks()) {
+                ItemStack result = storage.extract(listEntry.getStack(), listEntry.getStack().getCount(), DEFAULT_EXTRACT_FLAGS, action);
 
-        for (StackListEntry<ItemStack> entry : list.getStacks()) {
-            ItemStack result = storage.extract(entry.getStack(), entry.getStack().getCount(), DEFAULT_EXTRACT_FLAGS, action);
+                if (result == ItemStack.EMPTY || result.getCount() != listEntry.getStack().getCount()) {
+                    if (action == Action.PERFORM) {
+                        throw new IllegalStateException("The internal crafting inventory reported that " + listEntry.getStack() + " was available but we got " + result);
+                    }
 
-            if (result.isEmpty() || result.getCount() != entry.getStack().getCount()) {
-                if (action == Action.PERFORM) {
-                    throw new IllegalStateException("The internal crafting inventory reported that " + entry.getStack() + " was available but we got " + result);
+                    return null;
                 }
 
-                return null;
+                queue.add(result);
             }
 
-            extracted.add(result);
+            extracted.put(entry.getKey(), queue);
         }
 
         return extracted;
     }
 
-    public static IStackList<FluidStack> extractFromInternalFluidStorage(IStackList<FluidStack> list, IStorageDisk<FluidStack> storage, Action action) {
-        IStackList<FluidStack> extracted = API.instance().createFluidStackList();
+    public static Map<Integer, Queue<FluidStack>> extractFromInternalFluidStorage(Map<Integer, IStackList<FluidStack>> stacks, IStorageDisk<FluidStack> storage, Action action) {
+        Map<Integer, Queue<FluidStack>> extracted = new HashMap<>();
+        for (Map.Entry<Integer, IStackList<FluidStack>> entry : stacks.entrySet()) {
+            Queue<FluidStack> queue = new ArrayDeque<>();
+            for (StackListEntry<FluidStack> listEntry : entry.getValue().getStacks()) {
+                FluidStack result = storage.extract(listEntry.getStack(), listEntry.getStack().getAmount(), DEFAULT_EXTRACT_FLAGS, action);
 
-        for (StackListEntry<FluidStack> entry : list.getStacks()) {
-            FluidStack result = storage.extract(entry.getStack(), entry.getStack().getAmount(), DEFAULT_EXTRACT_FLAGS, action);
+                if (result.isEmpty() || result.getAmount() != listEntry.getStack().getAmount()) {
+                    if (action == Action.PERFORM) {
+                        throw new IllegalStateException("The internal crafting inventory reported that " + listEntry.getStack() + " was available but we got " + result);
+                    }
 
-            if (result.isEmpty() || result.getAmount() != entry.getStack().getAmount()) {
-                if (action == Action.PERFORM) {
-                    throw new IllegalStateException("The internal crafting inventory reported that " + entry.getStack() + " was available but we got " + result);
+                    return null;
                 }
 
-                return null;
+                queue.add(result);
             }
 
-            extracted.add(result);
+            extracted.put(entry.getKey(), queue);
         }
 
         return extracted;
     }
 
-    public static boolean insertIntoInventory(@Nullable IItemHandler dest, Collection<StackListEntry<ItemStack>> toInsert, Action action) {
-        if (dest == null) {
-            return false;
-        }
-
+    public static boolean insertIntoInventory(@Nullable IItemHandler dest, NonNullList<ItemStack> toInsert, Action action) {
         if (toInsert.isEmpty()) {
             return true;
         }
 
-        Deque<StackListEntry<ItemStack>> stacks = new ArrayDeque<>(toInsert);
+        if (dest == null) {
+            return false;
+        }
 
-        StackListEntry<ItemStack> currentEntry = stacks.poll();
+        Deque<ItemStack> stacks = new ArrayDeque<>(toInsert);
 
-        ItemStack current = currentEntry != null ? currentEntry.getStack() : null;
+        ItemStack current = stacks.poll();
 
         List<Integer> availableSlots = IntStream.range(0, dest.getSlots()).boxed().collect(Collectors.toList());
 
@@ -98,9 +104,8 @@ public final class IoUtil {
             }
 
             if (remainder.isEmpty()) { // If we inserted successfully, get a next stack.
-                currentEntry = stacks.poll();
+                current = stacks.poll();
 
-                current = currentEntry != null ? currentEntry.getStack() : null;
             } else if (current.getCount() == remainder.getCount()) { // If we didn't insert anything over ALL these slots, stop here.
                 break;
             } else { // If we didn't insert all, continue with other slots and use our remainder.
@@ -117,13 +122,13 @@ public final class IoUtil {
         return success;
     }
 
-    public static boolean insertIntoInventory(IFluidHandler dest, Collection<StackListEntry<FluidStack>> toInsert, Action action) {
-        for (StackListEntry<FluidStack> entry : toInsert) {
-            int filled = dest.fill(entry.getStack(), action == Action.SIMULATE ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
+    public static boolean insertIntoInventory(IFluidHandler dest, NonNullList<FluidStack> toInsert, Action action) {
+        for (FluidStack stack : toInsert) {
+            int filled = dest.fill(stack, action == Action.SIMULATE ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
 
-            if (filled != entry.getStack().getAmount()) {
+            if (filled != stack.getAmount()) {
                 if (action == Action.PERFORM) {
-                    LOGGER.warn("Inventory unexpectedly didn't accept all of " + entry.getStack().getTranslationKey() + ", the remainder has been voided!");
+                    LOGGER.warn("Inventory unexpectedly didn't accept all of " + stack.getTranslationKey() + ", the remainder has been voided!");
                 }
 
                 return false;

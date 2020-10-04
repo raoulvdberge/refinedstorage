@@ -33,7 +33,8 @@ public class CraftingPatternInputs {
     }
 
     private void combineItemInputs(ICraftingPattern pattern) {
-        for (NonNullList<ItemStack> inputsForSlot : pattern.getInputs()) {
+        for (int i = 0; i < pattern.getInputs().size(); i++) {
+            NonNullList<ItemStack> inputsForSlot = pattern.getInputs().get(i);
             if (inputsForSlot.isEmpty()) {
                 continue;
             }
@@ -41,15 +42,16 @@ public class CraftingPatternInputs {
             Ingredient<ItemStack> matchingIngredient = findMatchingItemIngredient(inputsForSlot);
 
             if (matchingIngredient == null) {
-                itemIngredients.add(new Ingredient<>(inputsForSlot, inputsForSlot.get(0).getCount()));
+                itemIngredients.add(new Ingredient<>(inputsForSlot, inputsForSlot.get(0).getCount(), i));
             } else {
-                matchingIngredient.increaseCount(inputsForSlot.get(0).getCount());
+                matchingIngredient.increaseCount(inputsForSlot.get(0).getCount(), i);
             }
         }
     }
 
     private void combineFluidInputs(ICraftingPattern pattern) {
-        for (NonNullList<FluidStack> inputsForSlot : pattern.getFluidInputs()) {
+        for (int i = 0; i < pattern.getFluidInputs().size(); i++) {
+            NonNullList<FluidStack> inputsForSlot = pattern.getFluidInputs().get(i);
             if (inputsForSlot.isEmpty()) {
                 continue;
             }
@@ -57,9 +59,9 @@ public class CraftingPatternInputs {
             Ingredient<FluidStack> matchingIngredient = findMatchingFluidIngredient(inputsForSlot);
 
             if (matchingIngredient == null) {
-                fluidIngredients.add(new Ingredient<>(inputsForSlot, inputsForSlot.get(0).getAmount()));
+                fluidIngredients.add(new Ingredient<>(inputsForSlot, inputsForSlot.get(0).getAmount(), i));
             } else {
-                matchingIngredient.increaseCount(inputsForSlot.get(0).getAmount());
+                matchingIngredient.increaseCount(inputsForSlot.get(0).getAmount(), i);
             }
         }
     }
@@ -118,27 +120,5 @@ public class CraftingPatternInputs {
 
     public List<Ingredient<FluidStack>> getFluidIngredients() {
         return fluidIngredients;
-    }
-
-    public static class Ingredient<T> {
-        private final NonNullList<T> inputs;
-        private int count;
-
-        public Ingredient(NonNullList<T> inputs, int count) {
-            this.inputs = inputs;
-            this.count = count;
-        }
-
-        public NonNullList<T> getInputs() {
-            return inputs;
-        }
-
-        public int getCount() {
-            return count;
-        }
-
-        public void increaseCount(int count) {
-            this.count += count;
-        }
     }
 }

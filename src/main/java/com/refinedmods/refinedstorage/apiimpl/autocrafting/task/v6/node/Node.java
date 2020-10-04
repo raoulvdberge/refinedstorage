@@ -4,6 +4,7 @@ import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPattern;
 import com.refinedmods.refinedstorage.api.autocrafting.task.CraftingTaskReadException;
 import com.refinedmods.refinedstorage.api.network.INetwork;
 import com.refinedmods.refinedstorage.api.storage.disk.IStorageDisk;
+import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.CraftingPatternInputs;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.SerializationUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -22,11 +23,12 @@ public abstract class Node {
     protected int quantity;
     protected int totalQuantity;
 
-    protected final NodeRequirements requirements = new NodeRequirements();
+    protected final NodeRequirements requirements;
 
-    public Node(ICraftingPattern pattern, boolean root) {
+    public Node(ICraftingPattern pattern, boolean root, CraftingPatternInputs inputs) {
         this.pattern = pattern;
         this.root = root;
+        this.requirements = new NodeRequirements(inputs);
     }
 
     public Node(INetwork network, CompoundNBT tag) throws CraftingTaskReadException {
@@ -34,7 +36,7 @@ public abstract class Node {
         this.totalQuantity = tag.getInt(NBT_QUANTITY_TOTAL);
         this.pattern = SerializationUtil.readPatternFromNbt(tag.getCompound(NBT_PATTERN), network.getWorld());
         this.root = tag.getBoolean(NBT_ROOT);
-        this.requirements.readFromNbt(tag);
+        this.requirements = new NodeRequirements(tag);
     }
 
     public static Node fromNbt(INetwork network, CompoundNBT tag) throws CraftingTaskReadException {
@@ -44,6 +46,7 @@ public abstract class Node {
     public abstract void update(INetwork network, int ticks, NodeList nodes, IStorageDisk<ItemStack> internalStorage, IStorageDisk<FluidStack> internalFluidStorage, NodeListener listener);
 
     public void onCalculationFinished() {
+        requirements.readMaxSlots();
         this.totalQuantity = quantity;
     }
 

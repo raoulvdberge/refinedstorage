@@ -3,8 +3,7 @@ package com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.node;
 import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPattern;
 import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPatternContainer;
 import com.refinedmods.refinedstorage.api.network.INetwork;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.NonNullList;
+import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.CraftingPatternInputs;
 
 import java.util.*;
 
@@ -39,10 +38,10 @@ public class NodeList {
         nodesToRemove.add(node);
     }
 
-    public Node createOrAddToExistingNode(ICraftingPattern pattern, boolean root, NonNullList<ItemStack> recipe, int qty) {
+    public Node createOrAddToExistingNode(ICraftingPattern pattern, boolean root, CraftingPatternInputs inputs, int qty) {
         Node node = nodes.get(pattern);
         if (node == null) {
-            nodes.put(pattern, node = createNode(pattern, root, recipe));
+            nodes.put(pattern, node = createNode(pattern, root, inputs));
         }
 
         node.addQuantity(qty);
@@ -50,8 +49,8 @@ public class NodeList {
         return node;
     }
 
-    private Node createNode(ICraftingPattern pattern, boolean root, NonNullList<ItemStack> recipe) {
-        return pattern.isProcessing() ? new ProcessingNode(pattern, root) : new CraftingNode(pattern, root, recipe);
+    private Node createNode(ICraftingPattern pattern, boolean root, CraftingPatternInputs inputs) {
+        return pattern.isProcessing() ? new ProcessingNode(pattern, root, inputs) : new CraftingNode(pattern, root, inputs);
     }
 
     public void put(ICraftingPattern pattern, Node node) {

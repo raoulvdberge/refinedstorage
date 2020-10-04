@@ -6,35 +6,23 @@ import com.refinedmods.refinedstorage.api.autocrafting.task.CraftingTaskReadExce
 import com.refinedmods.refinedstorage.api.network.INetwork;
 import com.refinedmods.refinedstorage.api.storage.disk.IStorageDisk;
 import com.refinedmods.refinedstorage.api.util.Action;
+import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.CraftingPatternInputs;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.IoUtil;
-import com.refinedmods.refinedstorage.util.StackUtils;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
 import net.minecraft.util.NonNullList;
-import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.fluids.FluidStack;
 
+import java.util.Map;
+import java.util.Queue;
+
 public class CraftingNode extends Node {
-    private static final String NBT_RECIPE = "Recipe";
-
-    private final NonNullList<ItemStack> recipe;
-
-    public CraftingNode(ICraftingPattern pattern, boolean root, NonNullList<ItemStack> recipe) {
-        super(pattern, root);
-
-        this.recipe = recipe;
+    public CraftingNode(ICraftingPattern pattern, boolean root, CraftingPatternInputs inputs) {
+        super(pattern, root, inputs);
     }
 
     public CraftingNode(INetwork network, CompoundNBT tag) throws CraftingTaskReadException {
         super(network, tag);
-
-        this.recipe = NonNullList.create();
-
-        ListNBT tookList = tag.getList(NBT_RECIPE, Constants.NBT.TAG_COMPOUND);
-        for (int i = 0; i < tookList.size(); ++i) {
-            recipe.add(StackUtils.deserializeStackFromNbt(tookList.getCompound(i)));
-        }
     }
 
     @Override
@@ -48,9 +36,10 @@ public class CraftingNode extends Node {
             if (interval == 0 || ticks % interval == 0) {
                 for (int i = 0; i < container.getMaximumSuccessfulCraftingUpdates(); i++) {
                     if (IoUtil.extractFromInternalItemStorage(requirements.getSingleItemRequirementSet(true), internalStorage, Action.SIMULATE) != null) {
-                        IoUtil.extractFromInternalItemStorage(requirements.getSingleItemRequirementSet(false), internalStorage, Action.PERFORM);
+                        Map<Integer, Queue<ItemStack>> extracted = IoUtil.extractFromInternalItemStorage(requirements.getSingleItemRequirementSet(false), internalStorage, Action.PERFORM);
 
-                        ItemStack output = getPattern().getOutput(recipe);
+                        NonNullList<ItemStack> appliedRecipe = requirements.getItemsAsList(extracted, false);
+                        ItemStack output = getPattern().getOutput(appliedRecipe);
 
                         if (!isRoot()) {
                             internalStorage.insert(output, output.getCount(), Action.PERFORM);
@@ -62,7 +51,7 @@ public class CraftingNode extends Node {
 
                         // Byproducts need to always be inserted in the internal storage for later reuse further in the task.
                         // Regular outputs can be inserted into the network *IF* it's a root since it's *NOT* expected to be used later on.
-                        for (ItemStack byp : getPattern().getByproducts(recipe)) {
+                        for (ItemStack byp : getPattern().getByproducts(appliedRecipe)) {
                             internalStorage.insert(byp, byp.getCount(), Action.PERFORM);
                         }
 
@@ -80,19 +69,5 @@ public class CraftingNode extends Node {
                 }
             }
         }
-    }
-
-    @Override
-    public CompoundNBT writeToNbt() {
-        CompoundNBT tag = super.writeToNbt();
-
-        ListNBT tookList = new ListNBT();
-        for (ItemStack took : this.recipe) {
-            tookList.add(StackUtils.serializeStackToNbt(took));
-        }
-
-        tag.put(NBT_RECIPE, tookList);
-
-        return tag;
     }
 }
