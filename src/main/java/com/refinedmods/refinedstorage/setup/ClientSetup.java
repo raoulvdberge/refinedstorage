@@ -2,6 +2,7 @@ package com.refinedmods.refinedstorage.setup;
 
 import com.refinedmods.refinedstorage.*;
 import com.refinedmods.refinedstorage.apiimpl.API;
+import com.refinedmods.refinedstorage.apiimpl.network.node.cover.CoverType;
 import com.refinedmods.refinedstorage.container.CrafterContainer;
 import com.refinedmods.refinedstorage.container.CrafterManagerContainer;
 import com.refinedmods.refinedstorage.container.slot.CrafterManagerSlot;
@@ -23,14 +24,17 @@ import net.minecraft.client.gui.ScreenManager;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.RenderTypeLookup;
+import net.minecraft.client.renderer.texture.AtlasTexture;
 import net.minecraft.inventory.container.Container;
 import net.minecraft.inventory.container.Slot;
 import net.minecraft.item.DyeColor;
 import net.minecraft.item.ItemModelsProperties;
+import net.minecraft.item.ItemStack;
 import net.minecraft.resources.IReloadableResourceManager;
 import net.minecraft.resources.IResourceManager;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.ModelBakeEvent;
+import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -107,6 +111,9 @@ public class ClientSetup {
             false,
             new ResourceLocation(RS.ID, "block/disks/leds")
         ));
+        bakedModelOverrideRegistry.add(new ResourceLocation(RS.ID, "cable"), (base, registry) -> new BakedModelCableCover(base));
+        bakedModelOverrideRegistry.add(new ResourceLocation(RS.ID, "cover"), (base, registry) -> new BakedModelCover(ItemStack.EMPTY, CoverType.NORMAL));
+        bakedModelOverrideRegistry.add(new ResourceLocation(RS.ID, "hollow_cover"), (base, registry) -> new BakedModelCover(ItemStack.EMPTY, CoverType.HOLLOW));
 
         forEachColorApply("disk_manipulator", (name, color) -> bakedModelOverrideRegistry.add(name, (base, registry) -> new FullbrightBakedModel(
             new DiskManipulatorBakedModel(
@@ -167,6 +174,7 @@ public class ClientSetup {
 
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onClientSetup);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onModelBake);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onTextureStitch);
         MinecraftForge.EVENT_BUS.addListener(new ExperimentalLightingPipelineNagger()::onPlayerLoggedIn);
 
         API.instance().addPatternRenderHandler(pattern -> Screen.hasShiftDown());
@@ -304,5 +312,11 @@ public class ClientSetup {
                 e.getModelRegistry().put(id, factory.create(e.getModelRegistry().get(id), e.getModelRegistry()));
             }
         }
+    }
+
+    @SubscribeEvent
+    public void onTextureStitch(TextureStitchEvent.Pre event){
+        if (event.getMap().getTextureLocation().equals(AtlasTexture.LOCATION_BLOCKS_TEXTURE))
+            event.addSprite(new ResourceLocation(RS.ID ,"block/cable_part_border"));
     }
 }

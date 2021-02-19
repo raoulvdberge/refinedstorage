@@ -19,4 +19,9 @@ public final class CollisionUtils {
             && hit.z >= aabb.minZ
             && hit.z <= aabb.maxZ;
     }
+
+    public static AxisAlignedBB getBounds(int fromX, int fromY, int fromZ, int toX, int toY, int toZ) {
+        return new AxisAlignedBB((float) fromX / 16F, (float) fromY / 16F, (float) fromZ / 16F, (float) toX / 16F, (float) toY / 16F, (float) toZ / 16F);
+    }
+
 }

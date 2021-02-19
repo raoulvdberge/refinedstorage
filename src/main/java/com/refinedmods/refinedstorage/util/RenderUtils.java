@@ -1,29 +1,45 @@
 package com.refinedmods.refinedstorage.util;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.refinedmods.refinedstorage.api.util.IComparer;
 import com.refinedmods.refinedstorage.apiimpl.API;
 import com.refinedmods.refinedstorage.render.Styles;
 import com.refinedmods.refinedstorage.screen.BaseScreen;
+import net.minecraft.block.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.model.BakedQuad;
+import net.minecraft.client.renderer.model.IBakedModel;
+import net.minecraft.client.renderer.model.ItemCameraTransforms;
+import net.minecraft.client.renderer.model.ItemTransformVec3f;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.client.renderer.vertex.VertexFormat;
+import net.minecraft.client.renderer.vertex.VertexFormatElement;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.Direction;
 import net.minecraft.util.math.vector.Matrix4f;
+import net.minecraft.util.math.vector.Quaternion;
+import net.minecraft.util.math.vector.TransformationMatrix;
+import net.minecraft.util.math.vector.Vector3f;
 import net.minecraft.util.text.*;
+import net.minecraftforge.client.ForgeHooksClient;
+import net.minecraftforge.client.MinecraftForgeClient;
 import net.minecraftforge.client.event.RenderTooltipEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fml.client.gui.GuiUtils;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
 
 public final class RenderUtils {
     private RenderUtils() {
@@ -299,4 +315,100 @@ public final class RenderUtils {
     public static boolean inBounds(int x, int y, int w, int h, double ox, double oy) {
         return ox >= x && ox <= x + w && oy >= y && oy <= y + h;
     }
+
+    public static boolean isLightMapDisabled() {
+        return false; //FMLClientHandler.instance().hasOptifine() || !ForgeModContainer.forgeLightPipelineEnabled; TODO
+    }
+
+    public static VertexFormat getFormatWithLightMap(VertexFormat format) {
+        if (isLightMapDisabled()) {
+            return format;
+        }
+
+        if (format == DefaultVertexFormats.BLOCK) {
+            return DefaultVertexFormats.BLOCK;
+        } else if (!format.hasUV(1)) { ;
+            return new VertexFormat(ImmutableList.<VertexFormatElement>builder().addAll(format.getElements()).add(DefaultVertexFormats.TEX_2S).build());
+        }
+
+        return format;
+    }
+
+    public static TextureAtlasSprite getSprite(IBakedModel coverModel, BlockState coverState, Direction facing, Random rand) {
+        TextureAtlasSprite sprite = null;
+
+        RenderType originalLayer = MinecraftForgeClient.getRenderLayer();
+
+        try {
+            for (RenderType layer : RenderType.getBlockRenderTypes()) {
+                ForgeHooksClient.setRenderLayer(layer);
+
+                for (BakedQuad bakedQuad : coverModel.getQuads(coverState, facing, rand)) {
+                    return bakedQuad.func_187508_a();
+                }
+
+                for (BakedQuad bakedQuad : coverModel.getQuads(coverState, null, rand)) {
+                    if (sprite == null) {
+                        sprite = bakedQuad.func_187508_a();
+                    }
+
+                    if (bakedQuad.getFace() == facing) {
+                        return bakedQuad.func_187508_a();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // NO OP
+        } finally {
+            ForgeHooksClient.setRenderLayer(originalLayer);
+        }
+
+        if (sprite == null) {
+            try {
+                sprite = coverModel.getParticleTexture();
+            } catch (Exception e) {
+                // NO OP
+            }
+        }
+
+        if (sprite == null) {
+            sprite = null; //TODO Get missing sprite
+        }
+
+        return sprite;
+    }
+
+    private static ImmutableMap<ItemCameraTransforms.TransformType, TransformationMatrix> DEFAULT_BLOCK_TRANSFORM;
+
+    public static ImmutableMap<ItemCameraTransforms.TransformType, TransformationMatrix> getDefaultBlockTransforms() {
+        if (DEFAULT_BLOCK_TRANSFORM != null) {
+            return DEFAULT_BLOCK_TRANSFORM;
+        }
+
+        TransformationMatrix thirdperson = getTransform(0, 2.5f, 0, 75, 45, 0, 0.375f);
+
+        return DEFAULT_BLOCK_TRANSFORM = ImmutableMap.<ItemCameraTransforms.TransformType, TransformationMatrix>builder()
+                .put(ItemCameraTransforms.TransformType.GUI, getTransform(0, 0, 0, 30, 225, 0, 0.625f))
+                .put(ItemCameraTransforms.TransformType.GROUND, getTransform(0, 3, 0, 0, 0, 0, 0.25f))
+                .put(ItemCameraTransforms.TransformType.FIXED, getTransform(0, 0, 0, 0, 0, 0, 0.5f))
+                .put(ItemCameraTransforms.TransformType.THIRD_PERSON_RIGHT_HAND, thirdperson)
+                .put(ItemCameraTransforms.TransformType.THIRD_PERSON_LEFT_HAND, leftifyTransform(thirdperson))
+                .put(ItemCameraTransforms.TransformType.FIRST_PERSON_RIGHT_HAND, getTransform(0, 0, 0, 0, 45, 0, 0.4f))
+                .put(ItemCameraTransforms.TransformType.FIRST_PERSON_LEFT_HAND, getTransform(0, 0, 0, 0, 225, 0, 0.4f))
+                .build();
+    }
+
+    private static TransformationMatrix leftifyTransform(TransformationMatrix transform) {
+        return transform.blockCornerToCenter().blockCenterToCorner();
+    }
+
+    private static TransformationMatrix getTransform(float tx, float ty, float tz, float ax, float ay, float az, float s) {
+        return new TransformationMatrix(
+                new Vector3f(tx / 16, ty / 16, tz / 16),
+                new Quaternion(ax, ay, az, true),
+                new Vector3f(s, s, s),
+                null
+        );
+    }
+
 }

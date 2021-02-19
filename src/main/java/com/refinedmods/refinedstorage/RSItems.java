@@ -43,6 +43,8 @@ public final class RSItems {
     public static final RegistryObject<WirelessCraftingMonitorItem> WIRELESS_CRAFTING_MONITOR;
     public static final RegistryObject<WirelessCraftingMonitorItem> CREATIVE_WIRELESS_CRAFTING_MONITOR;
     public static final RegistryObject<BlockItem> MACHINE_CASING;
+    public static final RegistryObject<CoverItem> COVER;
+    public static final RegistryObject<CoverItem> HOLLOW_COVER;
 
     public static final Map<ProcessorItem.Type, RegistryObject<ProcessorItem>> PROCESSORS = new EnumMap<>(ProcessorItem.Type.class);
 
@@ -121,6 +123,8 @@ public final class RSItems {
 
         registerBlockItemFor(RSBlocks.QUARTZ_ENRICHED_IRON);
         MACHINE_CASING = registerBlockItemFor(RSBlocks.MACHINE_CASING);
+        COVER = ITEMS.register("cover", CoverItem::new);
+        HOLLOW_COVER = ITEMS.register("hollow_cover", HollowCoverItem::new);
         registerBlockItemFor(RSBlocks.CABLE);
         registerBlockItemFor(RSBlocks.DISK_DRIVE);
 

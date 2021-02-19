@@ -3,6 +3,7 @@ package com.refinedmods.refinedstorage.block;
 import com.refinedmods.refinedstorage.block.shape.ShapeCache;
 import com.refinedmods.refinedstorage.container.DestructorContainer;
 import com.refinedmods.refinedstorage.container.factory.PositionalTileContainerProvider;
+import com.refinedmods.refinedstorage.render.ConstantsCable;
 import com.refinedmods.refinedstorage.tile.DestructorTile;
 import com.refinedmods.refinedstorage.util.BlockUtils;
 import com.refinedmods.refinedstorage.util.CollisionUtils;
@@ -56,7 +57,7 @@ public class DestructorBlock extends CableBlock {
 
             shape = VoxelShapes.or(shape, getHeadShape(s));
 
-            return shape;
+            return ConstantsCable.addCoverVoxelShapes(shape, world, pos);
         });
     }
 

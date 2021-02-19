@@ -6,6 +6,7 @@ import com.refinedmods.refinedstorage.apiimpl.network.node.ExternalStorageNetwor
 import com.refinedmods.refinedstorage.block.shape.ShapeCache;
 import com.refinedmods.refinedstorage.container.ExternalStorageContainer;
 import com.refinedmods.refinedstorage.container.factory.PositionalTileContainerProvider;
+import com.refinedmods.refinedstorage.render.ConstantsCable;
 import com.refinedmods.refinedstorage.tile.ExternalStorageTile;
 import com.refinedmods.refinedstorage.util.BlockUtils;
 import com.refinedmods.refinedstorage.util.CollisionUtils;
@@ -54,7 +55,7 @@ public class ExternalStorageBlock extends CableBlock {
 
             shape = VoxelShapes.or(shape, getHeadShape(s));
 
-            return shape;
+            return ConstantsCable.addCoverVoxelShapes(shape, world, pos);
         });
     }
 

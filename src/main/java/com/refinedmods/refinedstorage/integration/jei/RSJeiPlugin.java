@@ -1,11 +1,13 @@
 package com.refinedmods.refinedstorage.integration.jei;
 
 import com.refinedmods.refinedstorage.RS;
+import com.refinedmods.refinedstorage.RSItems;
 import com.refinedmods.refinedstorage.screen.BaseScreen;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
+import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.util.ResourceLocation;
 
@@ -38,5 +40,10 @@ public class RSJeiPlugin implements IModPlugin {
 
     public static IJeiRuntime getRuntime() {
         return runtime;
+    }
+
+    @Override
+    public void registerItemSubtypes(ISubtypeRegistration registration) {
+        registration.useNbtForSubtypes(RSItems.COVER.get(), RSItems.HOLLOW_COVER.get());
     }
 }

@@ -1,8 +1,14 @@
 package com.refinedmods.refinedstorage.block;
 
+import com.refinedmods.refinedstorage.api.network.node.ICoverable;
+import com.refinedmods.refinedstorage.apiimpl.network.node.cover.Cover;
+import com.refinedmods.refinedstorage.apiimpl.network.node.cover.CoverManager;
+import com.refinedmods.refinedstorage.apiimpl.network.node.cover.CoverType;
 import com.refinedmods.refinedstorage.block.shape.ShapeCache;
 import com.refinedmods.refinedstorage.capability.NetworkNodeProxyCapability;
+import com.refinedmods.refinedstorage.render.ConstantsCable;
 import com.refinedmods.refinedstorage.tile.CableTile;
+import com.refinedmods.refinedstorage.tile.NetworkNodeTile;
 import com.refinedmods.refinedstorage.util.BlockUtils;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -69,7 +75,7 @@ public class CableBlock extends NetworkNodeBlock implements IWaterLoggable {
     @Override
     @SuppressWarnings("deprecation")
     public VoxelShape getShape(BlockState state, IBlockReader world, BlockPos pos, ISelectionContext ctx) {
-        return ShapeCache.getOrCreate(state, CableBlock::getCableShape);
+        return ConstantsCable.addCoverVoxelShapes(ShapeCache.getOrCreate(state, CableBlock::getCableShape), world, pos);
     }
 
     protected static VoxelShape getCableShape(BlockState state) {
