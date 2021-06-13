@@ -6,16 +6,27 @@ import com.refinedmods.refinedstorage.api.util.StackListEntry;
 import com.refinedmods.refinedstorage.api.util.StackListResult;
 import com.refinedmods.refinedstorage.apiimpl.API;
 import net.minecraft.fluid.Fluid;
-import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class FluidStackList implements IStackList<FluidStack> {
     private final ArrayListMultimap<Fluid, StackListEntry<FluidStack>> stacks = ArrayListMultimap.create();
     private final Map<UUID, FluidStack> index = new HashMap<>();
+
+    public FluidStackList() {
+    }
+
+    public FluidStackList(Iterable<FluidStack> stacks) {
+        for (FluidStack stack : stacks) {
+            add(stack);
+        }
+    }
 
     @Override
     public StackListResult<FluidStack> add(@Nonnull FluidStack stack, int size) {

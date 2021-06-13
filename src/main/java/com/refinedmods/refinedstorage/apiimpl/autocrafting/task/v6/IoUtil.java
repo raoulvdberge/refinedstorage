@@ -6,7 +6,6 @@ import com.refinedmods.refinedstorage.api.util.Action;
 import com.refinedmods.refinedstorage.api.util.IComparer;
 import com.refinedmods.refinedstorage.api.util.IStackList;
 import com.refinedmods.refinedstorage.api.util.StackListEntry;
-import com.refinedmods.refinedstorage.apiimpl.API;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
@@ -15,7 +14,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -26,15 +28,15 @@ public final class IoUtil {
     private IoUtil() {
     }
 
-    public static IStackList<ItemStack> extractFromInternalItemStorage(IStackList<ItemStack> list, IStorageDisk<ItemStack> storage, Action action) {
-        IStackList<ItemStack> extracted = API.instance().createItemStackList();
+    public static List<ItemStack> extractFromInternalItemStorage(List<ItemStack> stacks, IStorageDisk<ItemStack> storage, Action action) {
+        List<ItemStack> extracted = new ArrayList<>();
 
-        for (StackListEntry<ItemStack> entry : list.getStacks()) {
-            ItemStack result = storage.extract(entry.getStack(), entry.getStack().getCount(), DEFAULT_EXTRACT_FLAGS, action);
+        for (ItemStack stack : stacks) {
+            ItemStack result = storage.extract(stack, stack.getCount(), DEFAULT_EXTRACT_FLAGS, action);
 
-            if (result.isEmpty() || result.getCount() != entry.getStack().getCount()) {
+            if (result.isEmpty() || result.getCount() != stack.getCount()) {
                 if (action == Action.PERFORM) {
-                    throw new IllegalStateException("The internal crafting inventory reported that " + entry.getStack() + " was available but we got " + result);
+                    throw new IllegalStateException("The internal crafting inventory reported that " + stack + " was available but we got " + result);
                 }
 
                 return null;
@@ -46,15 +48,15 @@ public final class IoUtil {
         return extracted;
     }
 
-    public static IStackList<FluidStack> extractFromInternalFluidStorage(IStackList<FluidStack> list, IStorageDisk<FluidStack> storage, Action action) {
-        IStackList<FluidStack> extracted = API.instance().createFluidStackList();
+    public static List<FluidStack> extractFromInternalFluidStorage(List<FluidStack> stacks, IStorageDisk<FluidStack> storage, Action action) {
+        List<FluidStack> extracted = new ArrayList<>();
 
-        for (StackListEntry<FluidStack> entry : list.getStacks()) {
-            FluidStack result = storage.extract(entry.getStack(), entry.getStack().getAmount(), DEFAULT_EXTRACT_FLAGS, action);
+        for (FluidStack stack : stacks) {
+            FluidStack result = storage.extract(stack, stack.getAmount(), DEFAULT_EXTRACT_FLAGS, action);
 
-            if (result.isEmpty() || result.getAmount() != entry.getStack().getAmount()) {
+            if (result.isEmpty() || result.getAmount() != stack.getAmount()) {
                 if (action == Action.PERFORM) {
-                    throw new IllegalStateException("The internal crafting inventory reported that " + entry.getStack() + " was available but we got " + result);
+                    throw new IllegalStateException("The internal crafting inventory reported that " + stack + " was available but we got " + result);
                 }
 
                 return null;
@@ -66,7 +68,7 @@ public final class IoUtil {
         return extracted;
     }
 
-    public static boolean insertIntoInventory(@Nullable IItemHandler dest, Collection<StackListEntry<ItemStack>> toInsert, Action action) {
+    public static boolean insertIntoInventory(@Nullable IItemHandler dest, List<ItemStack> toInsert, Action action) {
         if (dest == null) {
             return false;
         }
@@ -75,11 +77,9 @@ public final class IoUtil {
             return true;
         }
 
-        Deque<StackListEntry<ItemStack>> stacks = new ArrayDeque<>(toInsert);
+        Deque<ItemStack> stacks = new ArrayDeque<>(toInsert);
 
-        StackListEntry<ItemStack> currentEntry = stacks.poll();
-
-        ItemStack current = currentEntry != null ? currentEntry.getStack() : null;
+        ItemStack current = stacks.poll();
 
         List<Integer> availableSlots = IntStream.range(0, dest.getSlots()).boxed().collect(Collectors.toList());
 
@@ -100,9 +100,7 @@ public final class IoUtil {
             }
 
             if (remainder.isEmpty()) { // If we inserted successfully, get a next stack.
-                currentEntry = stacks.poll();
-
-                current = currentEntry != null ? currentEntry.getStack() : null;
+                current = stacks.poll();
             } else if (current.getCount() == remainder.getCount()) { // If we didn't insert anything over ALL these slots, stop here.
                 break;
             } else { // If we didn't insert all, continue with other slots and use our remainder.
@@ -119,13 +117,13 @@ public final class IoUtil {
         return success;
     }
 
-    public static boolean insertIntoInventory(IFluidHandler dest, Collection<StackListEntry<FluidStack>> toInsert, Action action) {
-        for (StackListEntry<FluidStack> entry : toInsert) {
-            int filled = dest.fill(entry.getStack(), action == Action.SIMULATE ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
+    public static boolean insertIntoInventory(IFluidHandler dest, List<FluidStack> toInsert, Action action) {
+        for (FluidStack stack : toInsert) {
+            int filled = dest.fill(stack, action == Action.SIMULATE ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
 
-            if (filled != entry.getStack().getAmount()) {
+            if (filled != stack.getAmount()) {
                 if (action == Action.PERFORM) {
-                    LOGGER.warn("Inventory unexpectedly didn't accept all of {}, the remainder has been voided!", entry.getStack().getTranslationKey());
+                    LOGGER.warn("Inventory unexpectedly didn't accept all of {}, the remainder has been voided!", stack.getTranslationKey());
                 }
 
                 return false;
