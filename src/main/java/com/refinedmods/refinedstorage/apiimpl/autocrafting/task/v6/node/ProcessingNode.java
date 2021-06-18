@@ -11,10 +11,14 @@ import com.refinedmods.refinedstorage.api.util.StackListEntry;
 import com.refinedmods.refinedstorage.apiimpl.API;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.IoUtil;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.SerializationUtil;
+import com.refinedmods.refinedstorage.apiimpl.util.FluidStackList;
+import com.refinedmods.refinedstorage.apiimpl.util.ItemStackList;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.fluids.FluidStack;
+
+import java.util.List;
 
 public class ProcessingNode extends Node {
     private static final String NBT_ITEMS_RECEIVED = "ItemsReceived";
@@ -117,8 +121,8 @@ public class ProcessingNode extends Node {
 
                     boolean hasAllRequirements = false;
 
-                    IStackList<ItemStack> extractedItems = IoUtil.extractFromInternalItemStorage(requirements.getSingleItemRequirementSet(true), internalStorage, Action.SIMULATE);
-                    IStackList<FluidStack> extractedFluids = null;
+                    List<ItemStack> extractedItems = IoUtil.extractFromInternalItemStorage(requirements.getSingleItemRequirementSet(true), internalStorage, Action.SIMULATE);
+                    List<FluidStack> extractedFluids = null;
                     if (extractedItems != null) {
                         extractedFluids = IoUtil.extractFromInternalFluidStorage(requirements.getSingleFluidRequirementSet(true), internalFluidStorage, Action.SIMULATE);
                         if (extractedFluids != null) {
@@ -128,9 +132,9 @@ public class ProcessingNode extends Node {
 
                     boolean canInsertFullAmount = false;
                     if (hasAllRequirements) {
-                        canInsertFullAmount = IoUtil.insertIntoInventory(container.getConnectedInventory(), extractedItems.getStacks(), Action.SIMULATE);
+                        canInsertFullAmount = IoUtil.insertIntoInventory(container.getConnectedInventory(), extractedItems, Action.SIMULATE);
                         if (canInsertFullAmount) {
-                            canInsertFullAmount = IoUtil.insertIntoInventory(container.getConnectedFluidInventory(), extractedFluids.getStacks(), Action.SIMULATE);
+                            canInsertFullAmount = IoUtil.insertIntoInventory(container.getConnectedFluidInventory(), extractedFluids, Action.SIMULATE);
                         }
                     } else {
                         break;
@@ -151,8 +155,8 @@ public class ProcessingNode extends Node {
                     extractedItems = IoUtil.extractFromInternalItemStorage(requirements.getSingleItemRequirementSet(false), internalStorage, Action.PERFORM);
                     extractedFluids = IoUtil.extractFromInternalFluidStorage(requirements.getSingleFluidRequirementSet(false), internalFluidStorage, Action.PERFORM);
 
-                    IoUtil.insertIntoInventory(container.getConnectedInventory(), extractedItems.getStacks(), Action.PERFORM);
-                    IoUtil.insertIntoInventory(container.getConnectedFluidInventory(), extractedFluids.getStacks(), Action.PERFORM);
+                    IoUtil.insertIntoInventory(container.getConnectedInventory(), extractedItems, Action.PERFORM);
+                    IoUtil.insertIntoInventory(container.getConnectedFluidInventory(), extractedFluids, Action.PERFORM);
 
                     next();
 
@@ -249,8 +253,8 @@ public class ProcessingNode extends Node {
     public void onCalculationFinished() {
         super.onCalculationFinished();
 
-        this.singleItemSetToRequire = requirements.getSingleItemRequirementSet(true);
-        this.singleFluidSetToRequire = requirements.getSingleFluidRequirementSet(true);
+        this.singleItemSetToRequire = new ItemStackList(requirements.getSingleItemRequirementSet(true));
+        this.singleFluidSetToRequire = new FluidStackList(requirements.getSingleFluidRequirementSet(true));
     }
 
     @Override

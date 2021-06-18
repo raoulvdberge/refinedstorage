@@ -11,12 +11,10 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class NodeRequirements {
     private static final String NBT_ITEMS_TO_USE = "ItemsToUse";
@@ -32,9 +30,9 @@ public class NodeRequirements {
     private final Map<Integer, Integer> fluidsNeededPerCraft = new LinkedHashMap<>();
 
     @Nullable
-    private IStackList<ItemStack> cachedSimulatedItemRequirementSet = null;
+    private List<ItemStack> cachedSimulatedItemRequirementSet = null;
     @Nullable
-    private IStackList<FluidStack> cachedSimulatedFluidRequirementSet = null;
+    private List<FluidStack> cachedSimulatedFluidRequirementSet = null;
 
     public void addItemRequirement(int ingredientNumber, ItemStack stack, int size, int perCraft) {
         if (!itemsNeededPerCraft.containsKey(ingredientNumber)) {
@@ -56,13 +54,13 @@ public class NodeRequirements {
         cachedSimulatedFluidRequirementSet = null;
     }
 
-    public IStackList<ItemStack> getSingleItemRequirementSet(boolean simulate) {
-        IStackList<ItemStack> cached = cachedSimulatedItemRequirementSet;
+    public List<ItemStack> getSingleItemRequirementSet(boolean simulate) {
+        List<ItemStack> cached = cachedSimulatedItemRequirementSet;
         if (simulate && cached != null) {
             return cached;
         }
 
-        IStackList<ItemStack> toReturn = API.instance().createItemStackList();
+        List<ItemStack> toReturn = new ArrayList<>();
 
         for (int i = 0; i < itemRequirements.size(); i++) {
             int needed = itemsNeededPerCraft.get(i);
@@ -78,7 +76,7 @@ public class NodeRequirements {
                             itemRequirements.get(i).remove(toUse, needed);
                         }
 
-                        toReturn.add(toUse, needed);
+                        toReturn.add(ItemHandlerHelper.copyStackWithSize(toUse, needed));
 
                         needed = 0;
                     } else {
@@ -101,13 +99,13 @@ public class NodeRequirements {
         return toReturn;
     }
 
-    public IStackList<FluidStack> getSingleFluidRequirementSet(boolean simulate) {
-        IStackList<FluidStack> cached = cachedSimulatedFluidRequirementSet;
+    public List<FluidStack> getSingleFluidRequirementSet(boolean simulate) {
+        List<FluidStack> cached = cachedSimulatedFluidRequirementSet;
         if (simulate && cached != null) {
             return cached;
         }
 
-        IStackList<FluidStack> toReturn = API.instance().createFluidStackList();
+        List<FluidStack> toReturn = new ArrayList<>();
 
         for (int i = 0; i < fluidRequirements.size(); i++) {
             int needed = fluidsNeededPerCraft.get(i);
@@ -123,7 +121,9 @@ public class NodeRequirements {
                             fluidRequirements.get(i).remove(toUse, needed);
                         }
 
-                        toReturn.add(toUse, needed);
+                        FluidStack newStack = toUse.copy();
+                        newStack.setAmount(needed);
+                        toReturn.add(newStack);
 
                         needed = 0;
                     } else {
