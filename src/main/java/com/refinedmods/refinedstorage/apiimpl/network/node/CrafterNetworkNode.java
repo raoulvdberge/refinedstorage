@@ -6,6 +6,8 @@ import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPatternContainer
 import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPatternProvider;
 import com.refinedmods.refinedstorage.api.network.INetwork;
 import com.refinedmods.refinedstorage.api.network.node.INetworkNode;
+import com.refinedmods.refinedstorage.api.util.Action;
+import com.refinedmods.refinedstorage.api.util.StackListEntry;
 import com.refinedmods.refinedstorage.apiimpl.API;
 import com.refinedmods.refinedstorage.inventory.item.BaseItemHandler;
 import com.refinedmods.refinedstorage.inventory.item.UpgradeItemHandler;
@@ -25,19 +27,23 @@ import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.wrapper.CombinedInvWrapper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class CrafterNetworkNode extends NetworkNode implements ICraftingPatternContainer {
+    private static final Logger LOGGER = LogManager.getLogger(CrafterNetworkNode.class);
+
     public enum CrafterMode {
         IGNORE,
         SIGNAL_UNLOCKS_AUTOCRAFTING,
@@ -466,5 +472,84 @@ public class CrafterNetworkNode extends NetworkNode implements ICraftingPatternC
 
             markDirty();
         }
+    }
+
+    @Override
+    public boolean insertItemsIntoInventory(Collection<StackListEntry<ItemStack>> toInsert, Action action) {
+        IItemHandler dest = getConnectedInventory();
+
+        if (dest == null) {
+            return false;
+        }
+
+        if (toInsert.isEmpty()) {
+            return true;
+        }
+
+        Deque<StackListEntry<ItemStack>> stacks = new ArrayDeque<>(toInsert);
+
+        StackListEntry<ItemStack> currentEntry = stacks.poll();
+
+        ItemStack current = currentEntry != null ? currentEntry.getStack() : null;
+
+        List<Integer> availableSlots = IntStream.range(0, dest.getSlots()).boxed().collect(Collectors.toList());
+
+        while (current != null && !availableSlots.isEmpty()) {
+            ItemStack remainder = ItemStack.EMPTY;
+
+            for (int i = 0; i < availableSlots.size(); ++i) {
+                int slot = availableSlots.get(i);
+
+                // .copy() is mandatory!
+                remainder = dest.insertItem(slot, current.copy(), action == Action.SIMULATE);
+
+                // If we inserted *something*
+                if (remainder.isEmpty() || current.getCount() != remainder.getCount()) {
+                    availableSlots.remove(i);
+                    break;
+                }
+            }
+
+            if (remainder.isEmpty()) { // If we inserted successfully, get a next stack.
+                currentEntry = stacks.poll();
+
+                current = currentEntry != null ? currentEntry.getStack() : null;
+            } else if (current.getCount() == remainder.getCount()) { // If we didn't insert anything over ALL these slots, stop here.
+                break;
+            } else { // If we didn't insert all, continue with other slots and use our remainder.
+                current = remainder;
+            }
+        }
+
+        boolean success = current == null && stacks.isEmpty();
+
+        if (!success && action == Action.PERFORM) {
+            LOGGER.warn("Inventory unexpectedly didn't accept {}, the remainder has been voided!", current != null ? current.getTranslationKey() : null);
+        }
+
+        return success;
+    }
+
+    @Override
+    public boolean insertFluidsIntoInventory(Collection<StackListEntry<FluidStack>> toInsert, Action action) {
+        IFluidHandler dest = getConnectedFluidInventory();
+
+        if (dest == null) {
+            return false;
+        }
+
+        for (StackListEntry<FluidStack> entry : toInsert) {
+            int filled = dest.fill(entry.getStack(), action == Action.SIMULATE ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
+
+            if (filled != entry.getStack().getAmount()) {
+                if (action == Action.PERFORM) {
+                    LOGGER.warn("Inventory unexpectedly didn't accept all of {}, the remainder has been voided!", entry.getStack().getTranslationKey());
+                }
+
+                return false;
+            }
+        }
+
+        return true;
     }
 }

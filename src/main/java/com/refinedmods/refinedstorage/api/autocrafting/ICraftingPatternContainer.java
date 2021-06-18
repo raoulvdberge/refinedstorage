@@ -1,14 +1,19 @@
 package com.refinedmods.refinedstorage.api.autocrafting;
 
+import com.refinedmods.refinedstorage.api.util.Action;
+import com.refinedmods.refinedstorage.api.util.StackListEntry;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -123,5 +128,39 @@ public interface ICraftingPatternContainer {
      * Called when this container is used by a processing pattern to insert items or fluids in the connected inventory.
      */
     default void onUsedForProcessing() {
+    }
+
+    /**
+     * Called when the autocrafting system wants to insert items. Will be called with Action.SIMULATE first and if that
+     * succeeds will be called again with Action.PERFORM
+     *
+     * @param toInsert A collection of items that should be inserted.
+     * @param action   Action to take
+     * @return whether the insertion was successful
+     */
+    boolean insertItemsIntoInventory(Collection<StackListEntry<ItemStack>> toInsert, Action action);
+
+    /**
+     * Called when the autocrafting system wants to insert fluids. Will be called with Action.SIMULATE first and if that
+     * succeeds will be called again with Action.PERFORM
+     *
+     * @param toInsert A collection of fluids that should be inserted.
+     * @param action   Action to take
+     * @return whether the insertion was successful
+     */
+    boolean insertFluidsIntoInventory(Collection<StackListEntry<FluidStack>> toInsert, Action action);
+
+    /**
+     * @return whether the container is successfully connected to the inventory it wants to insert to
+     */
+    default boolean hasConnectedInventory() {
+        return getConnectedInventory() != null;
+    }
+
+    /**
+     * @return whether the container is successfully connected to the fluid inventory it wants to insert to
+     */
+    default boolean hasConnectedFluidInventory() {
+        return getConnectedFluidInventory() != null;
     }
 }
