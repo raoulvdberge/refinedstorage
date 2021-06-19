@@ -2,6 +2,7 @@
 
 ### 1.9.13
 
+- Allow simple math input in AmountSpecifyingScreen (mooofins)
 - Fixed count on Storage Monitor having Z fighting (tivec)
 - Fixed items on Storage Monitor not being flat (raoulvdberge)
 - Removed experimental pipeline nagging message (raoulvdberge)
@@ -18,7 +19,7 @@
 - Fixed Ice and Fire banners breaking with Refined Storage (Darkere, necauqua)
 - Fixed empty keybinding causing GL errors (Darkere)
 - Fixed some parts of the Japanese translation (akihironagai)
-- Fixed rendering issue on blocks when using OptiFine (ylou)
+- Fixed rendering issue on blocks when using OptiFine (mooofins)
 
 ### 1.9.12
 

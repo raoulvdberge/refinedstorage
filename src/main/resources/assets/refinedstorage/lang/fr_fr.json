@@ -84,6 +84,7 @@
   "misc.refinedstorage.start": "Commencer",
   "misc.refinedstorage.clear": "Vider",
   "misc.refinedstorage.set": "Fixer",
+  "misc.refinedstorage.evaluate": "Évaluer",
   "misc.refinedstorage.cancel_all": "Tout annuler",
   "misc.refinedstorage.priority": "Priorité",
   "misc.refinedstorage.processing": "En traitement",

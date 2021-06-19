@@ -84,6 +84,7 @@
   "misc.refinedstorage.start": "시작",
   "misc.refinedstorage.clear": "초기화",
   "misc.refinedstorage.set": "설정",
+  "misc.refinedstorage.evaluate": "평가",
   "misc.refinedstorage.cancel_all": "모두 취소",
   "misc.refinedstorage.priority": "우선 순위",
 

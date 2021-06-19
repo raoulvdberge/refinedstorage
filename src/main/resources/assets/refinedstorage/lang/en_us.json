@@ -124,6 +124,7 @@
   "misc.refinedstorage.start": "Start",
   "misc.refinedstorage.clear": "Clear",
   "misc.refinedstorage.set": "Set",
+  "misc.refinedstorage.evaluate": "Evaluate",
   "misc.refinedstorage.cancel_all": "Cancel All",
   "misc.refinedstorage.priority": "Priority",
   "misc.refinedstorage.exact": "Exact",

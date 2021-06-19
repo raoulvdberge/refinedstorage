@@ -125,6 +125,7 @@
   "misc.refinedstorage.start": "開始",
   "misc.refinedstorage.clear": "清除",
   "misc.refinedstorage.set": "設置",
+  "misc.refinedstorage.evaluate": "評估",
   "misc.refinedstorage.cancel_all": "取消所有",
   "misc.refinedstorage.priority": "優先級",
   "misc.refinedstorage.exact": "合成模式",

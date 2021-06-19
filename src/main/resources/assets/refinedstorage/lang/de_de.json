@@ -105,6 +105,7 @@
   "misc.refinedstorage.start": "Start",
   "misc.refinedstorage.clear": "Löschen",
   "misc.refinedstorage.set": "Setzen",
+  "misc.refinedstorage.evaluate": "Auswerten",
   "misc.refinedstorage.cancel_all": "Alles Anhalten",
   "misc.refinedstorage.priority": "Priorität",
   "misc.refinedstorage.processing": "Verarbeitung",

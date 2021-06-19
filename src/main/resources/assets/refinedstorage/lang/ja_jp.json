@@ -125,6 +125,7 @@
   "misc.refinedstorage.start": "開始",
   "misc.refinedstorage.clear": "クリア",
   "misc.refinedstorage.set": "完了",
+  "misc.refinedstorage.evaluate": "を評価",
   "misc.refinedstorage.cancel_all": "全てキャンセル",
   "misc.refinedstorage.priority": "優先度",
   "misc.refinedstorage.exact": "精密モード",

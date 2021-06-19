@@ -54,6 +54,8 @@
 
   "misc.refinedstorage.start": "Start",
   "misc.refinedstorage.clear": "Legen",
+  "misc.refinedstorage.set": "Stel",
+  "misc.refinedstorage.evaluate": "Evalueer",
   "misc.refinedstorage.cancel_all": "Annuleer alles",
   "misc.refinedstorage.priority": "Prioriteit",
 

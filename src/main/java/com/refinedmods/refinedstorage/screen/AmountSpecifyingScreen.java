@@ -3,8 +3,10 @@ package com.refinedmods.refinedstorage.screen;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.refinedmods.refinedstorage.RS;
 import com.refinedmods.refinedstorage.render.RenderSettings;
+import com.refinedmods.refinedstorage.util.EquationEvaluator;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.button.Button;
+import net.minecraft.client.gui.widget.button.Button.IPressable;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.container.Container;
 import net.minecraft.util.text.ITextComponent;
@@ -19,8 +21,10 @@ public abstract class AmountSpecifyingScreen<T extends Container> extends BaseSc
     protected TextFieldWidget amountField;
     protected Button okButton;
     protected Button cancelButton;
+    protected Button evaluateButton;
 
-    protected AmountSpecifyingScreen(BaseScreen<T> parent, T container, int width, int height, PlayerInventory playerInventory, ITextComponent title) {
+    protected AmountSpecifyingScreen(BaseScreen<T> parent, T container, int width, int height,
+            PlayerInventory playerInventory, ITextComponent title) {
         super(container, width, height, playerInventory, title);
 
         this.parent = parent;
@@ -38,26 +42,59 @@ public abstract class AmountSpecifyingScreen<T extends Container> extends BaseSc
 
     protected abstract int getMaxAmount();
 
+    protected int getMinAmount() {
+        if (canAmountGoNegative()) {
+            return -getMaxAmount();
+        }
+        return 1;
+    }
+
+    protected int parseAmount() {
+        return (int) Math.ceil(EquationEvaluator.evaluate(amountField.getText()));
+    }
+
+    protected int clampAmount(int amount) {
+        return Math.max(getMinAmount(), Math.min(getMaxAmount(), amount));
+    }
+
+    protected boolean isAmountInBounds(int amount) {
+        return getMinAmount() <= amount && amount <= getMaxAmount();
+    }
+
     protected Pair<Integer, Integer> getAmountPos() {
         return Pair.of(7 + 2, 50 + 1);
     }
 
     protected Pair<Integer, Integer> getOkCancelPos() {
-        return Pair.of(114, 33);
+        return Pair.of(114, 20);
     }
 
     protected int getOkCancelButtonWidth() {
         return 50;
     }
 
+    protected int getOkCancelButtonHeight() {
+        return 20;
+    }
+
+    public Button addActionButton(Pair<Integer, Integer> absolutePos, int xOffset, int yOffset, ITextComponent text,
+            IPressable onPress) {
+        return addButton(absolutePos.getLeft() + xOffset, absolutePos.getRight() + yOffset, getOkCancelButtonWidth(),
+                getOkCancelButtonHeight(), text, true, true, onPress);
+    }
+
     @Override
     public void onPostInit(int x, int y) {
         Pair<Integer, Integer> pos = getOkCancelPos();
+        Pair<Integer, Integer> absolutePos = Pair.of(x + pos.getLeft(), y + pos.getRight());
 
-        okButton = addButton(x + pos.getLeft(), y + pos.getRight(), getOkCancelButtonWidth(), 20, getOkButtonText(), true, true, btn -> onOkButtonPressed(hasShiftDown()));
-        cancelButton = addButton(x + pos.getLeft(), y + pos.getRight() + 24, getOkCancelButtonWidth(), 20, new TranslationTextComponent("gui.cancel"), true, true, btn -> close());
+        okButton = addActionButton(absolutePos, 0, 0, getOkButtonText(), btn -> onOkButtonPressed(hasShiftDown()));
+        cancelButton = addActionButton(absolutePos, 0, 24, new TranslationTextComponent("gui.cancel"), btn -> close());
+        evaluateButton = addActionButton(absolutePos, 0, 48, new TranslationTextComponent("misc.refinedstorage.evaluate"),
+                btn -> onEvaluateButtonPressed(hasShiftDown()));
 
-        amountField = new TextFieldWidget(font, x + getAmountPos().getLeft(), y + getAmountPos().getRight(), 69 - 6, font.FONT_HEIGHT, new StringTextComponent(""));
+        amountField = new TextFieldWidget(font, x + getAmountPos().getLeft(), y + getAmountPos().getRight(), 69 - 6,
+                font.FONT_HEIGHT, new StringTextComponent(""));
         amountField.setEnableBackgroundDrawing(false);
         amountField.setVisible(true);
         amountField.setText(String.valueOf(getDefaultAmount()));
@@ -125,27 +162,39 @@ public abstract class AmountSpecifyingScreen<T extends Container> extends BaseSc
     }
 
     private void onIncrementButtonClicked(int increment) {
-        int oldAmount = 0;
-
         try {
-            oldAmount = Integer.parseInt(amountField.getText());
-        } catch (NumberFormatException e) {
+            int oldAmount = parseAmount();
+            int newAmount = oldAmount + increment;
+            if (!canAmountGoNegative() && oldAmount == 1) {
+                newAmount--;
+            }
+            amountField.setText(String.valueOf(clampAmount(newAmount)));
+        } catch (IllegalArgumentException e) {
             // NO OP
         }
+    }
 
-        int newAmount = increment;
-
-        if (!canAmountGoNegative()) {
-            newAmount = Math.max(1, ((oldAmount == 1 && newAmount != 1) ? 0 : oldAmount) + newAmount);
-        } else {
-            newAmount = oldAmount + newAmount;
+    private void onOkButtonPressed(boolean shiftDown) {
+        try {
+            int amount = parseAmount();
+            if (isAmountInBounds(amount)) {
+                onValidAmountSaved(shiftDown, amount);
+                close();
+            }
+        } catch (IllegalArgumentException e) {
+            // NO OP
         }
+    }
 
-        if (newAmount > getMaxAmount()) {
-            newAmount = getMaxAmount();
+    private void onEvaluateButtonPressed(boolean shiftDown) {
+        try {
+            amountField.setText(String.valueOf(clampAmount(parseAmount())));
+        } catch (IllegalArgumentException e) {
+            // NO OP
         }
+    }  
 
-        amountField.setText(String.valueOf(newAmount));
+    protected void onValidAmountSaved(boolean shiftDown, int amount) {
     }
 
     @Override
@@ -165,10 +214,6 @@ public abstract class AmountSpecifyingScreen<T extends Container> extends BaseSc
     @Override
     public void renderForeground(MatrixStack matrixStack, int mouseX, int mouseY) {
         renderString(matrixStack, 7, 7, title.getString());
-    }
-
-    protected void onOkButtonPressed(boolean shiftDown) {
-        // NO OP
     }
 
     @Override

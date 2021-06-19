@@ -87,15 +87,7 @@ public class FluidAmountScreen extends AmountSpecifyingScreen<FluidAmountContain
     }
 
     @Override
-    protected void onOkButtonPressed(boolean shiftDown) {
-        try {
-            int amount = Integer.parseInt(amountField.getText());
-
-            RS.NETWORK_HANDLER.sendToServer(new SetFluidFilterSlotMessage(containerSlot, StackUtils.copy(stack, amount)));
-
-            close();
-        } catch (NumberFormatException e) {
-            // NO OP
-        }
+    protected void onValidAmountSaved(boolean shiftDown, int amount) {
+        RS.NETWORK_HANDLER.sendToServer(new SetFluidFilterSlotMessage(containerSlot, StackUtils.copy(stack, amount)));
     }
 }

@@ -67,15 +67,7 @@ public class PriorityScreen extends AmountSpecifyingScreen<Container> {
     }
 
     @Override
-    protected void onOkButtonPressed(boolean noPreview) {
-        try {
-            int amount = Integer.parseInt(amountField.getText());
-
-            TileDataManager.setParameter(priority, amount);
-
-            close();
-        } catch (NumberFormatException e) {
-            // NO OP
-        }
+    protected void onValidAmountSaved(boolean shiftDown, int amount) {
+        TileDataManager.setParameter(priority, amount);
     }
 }

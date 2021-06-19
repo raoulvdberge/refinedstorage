@@ -125,6 +125,7 @@
   "misc.refinedstorage.start": "Начать",
   "misc.refinedstorage.clear": "Очистить",
   "misc.refinedstorage.set": "Установить",
+  "misc.refinedstorage.evaluate": "Вычислить",
   "misc.refinedstorage.cancel_all": "Отменить все",
   "misc.refinedstorage.priority": "Приоритет",
   "misc.refinedstorage.exact": "Точно",
