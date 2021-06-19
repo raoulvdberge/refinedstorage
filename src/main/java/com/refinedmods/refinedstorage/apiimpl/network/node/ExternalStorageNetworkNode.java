@@ -22,6 +22,7 @@ import com.refinedmods.refinedstorage.tile.ExternalStorageTile;
 import com.refinedmods.refinedstorage.tile.config.*;
 import com.refinedmods.refinedstorage.util.AccessTypeUtils;
 import com.refinedmods.refinedstorage.util.StackUtils;
+import net.minecraft.block.BlockState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.tileentity.TileEntity;
@@ -59,6 +60,7 @@ public class ExternalStorageNetworkNode extends NetworkNode implements IStorageP
     private int type = IType.ITEMS;
     private AccessType accessType = AccessType.INSERT_EXTRACT;
     private int networkTicks;
+    private BlockState connectedBlockState;
 
     private final List<IExternalStorage<ItemStack>> itemStorages = new CopyOnWriteArrayList<>();
     private final List<IExternalStorage<FluidStack>> fluidStorages = new CopyOnWriteArrayList<>();
@@ -88,6 +90,7 @@ public class ExternalStorageNetworkNode extends NetworkNode implements IStorageP
         if (canUpdate() && world.isBlockPresent(pos)) {
             if (networkTicks++ == 0) {
                 updateStorage(network, InvalidateCause.INITIAL_TICK_INVALIDATION);
+                connectedBlockState = world.getBlockState(pos.offset(getDirection()));
 
                 return;
             }
@@ -201,6 +204,15 @@ public class ExternalStorageNetworkNode extends NetworkNode implements IStorageP
         if (network != null) {
             network.getItemStorageCache().sort();
             network.getFluidStorageCache().sort();
+        }
+    }
+
+    public void onConnectedBlockChanged(BlockState state) {
+        if (state.equals(connectedBlockState)) {
+            update();
+        } else {
+            connectedBlockState = state;
+            updateStorage(network, InvalidateCause.NEIGHBOR_CHANGED);
         }
     }
 

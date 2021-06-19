@@ -1,7 +1,6 @@
 package com.refinedmods.refinedstorage.block;
 
 import com.refinedmods.refinedstorage.api.network.node.INetworkNode;
-import com.refinedmods.refinedstorage.api.storage.cache.InvalidateCause;
 import com.refinedmods.refinedstorage.apiimpl.network.node.ExternalStorageNetworkNode;
 import com.refinedmods.refinedstorage.block.shape.ShapeCache;
 import com.refinedmods.refinedstorage.container.ExternalStorageContainer;
@@ -123,7 +122,7 @@ public class ExternalStorageBlock extends CableBlock {
             if (node instanceof ExternalStorageNetworkNode &&
                 node.getNetwork() != null &&
                 fromPos.equals(pos.offset(((ExternalStorageNetworkNode) node).getDirection()))) {
-                ((ExternalStorageNetworkNode) node).updateStorage(node.getNetwork(), InvalidateCause.NEIGHBOR_CHANGED);
+                ((ExternalStorageNetworkNode) node).onConnectedBlockChanged(world.getBlockState(fromPos));
             }
         }
     }
