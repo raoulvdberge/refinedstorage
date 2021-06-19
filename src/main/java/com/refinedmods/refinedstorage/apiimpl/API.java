@@ -20,6 +20,7 @@ import com.refinedmods.refinedstorage.api.storage.disk.IStorageDiskManager;
 import com.refinedmods.refinedstorage.api.storage.disk.IStorageDiskRegistry;
 import com.refinedmods.refinedstorage.api.storage.disk.IStorageDiskSync;
 import com.refinedmods.refinedstorage.api.storage.externalstorage.IExternalStorageProvider;
+import com.refinedmods.refinedstorage.api.storage.tracker.IStorageTrackerManager;
 import com.refinedmods.refinedstorage.api.util.IComparer;
 import com.refinedmods.refinedstorage.api.util.IQuantityFormatter;
 import com.refinedmods.refinedstorage.api.util.IStackList;
@@ -34,6 +35,7 @@ import com.refinedmods.refinedstorage.apiimpl.network.NetworkNodeRegistry;
 import com.refinedmods.refinedstorage.apiimpl.network.grid.CraftingGridBehavior;
 import com.refinedmods.refinedstorage.apiimpl.network.grid.GridManager;
 import com.refinedmods.refinedstorage.apiimpl.storage.disk.*;
+import com.refinedmods.refinedstorage.apiimpl.storage.tracker.StorageTrackerManager;
 import com.refinedmods.refinedstorage.apiimpl.util.Comparer;
 import com.refinedmods.refinedstorage.apiimpl.util.FluidStackList;
 import com.refinedmods.refinedstorage.apiimpl.util.ItemStackList;
@@ -202,6 +204,14 @@ public class API implements IRSAPI {
     @Override
     public IStorageDiskSync getStorageDiskSync() {
         return storageDiskSync;
+    }
+
+    @Nonnull
+    @Override
+    public IStorageTrackerManager getStorageTrackerManager(ServerWorld anyWorld) {
+        ServerWorld world = anyWorld.getServer().func_241755_D_(); // Get the overworld
+
+        return world.getSavedData().getOrCreate(() -> new StorageTrackerManager(StorageTrackerManager.NAME), StorageTrackerManager.NAME);
     }
 
     @Override

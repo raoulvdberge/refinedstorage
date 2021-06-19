@@ -1,6 +1,7 @@
 package com.refinedmods.refinedstorage.api.storage.tracker;
 
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.nbt.ListNBT;
 
 import javax.annotation.Nullable;
 
@@ -22,4 +23,18 @@ public interface IStorageTracker<T> {
      */
     @Nullable
     StorageTrackerEntry get(T stack);
+
+    /**
+     * initialize tracker from nbt
+     *
+     * @param nbt to read from
+     */
+    void readFromNbt(ListNBT nbt);
+
+    /**
+     * write data to nbt
+     *
+     * @return data as nbt
+     */
+    ListNBT serializeNbt();
 }

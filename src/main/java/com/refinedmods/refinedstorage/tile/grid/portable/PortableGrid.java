@@ -59,8 +59,10 @@ import java.util.List;
 import java.util.UUID;
 
 public class PortableGrid implements IGrid, IPortableGrid, IStorageDiskContainerContext {
-    static final String NBT_STORAGE_TRACKER = "StorageTracker";
-    static final String NBT_FLUID_STORAGE_TRACKER = "FluidStorageTracker";
+    static final String NBT_STORAGE_TRACKER = "StorageTracker"; //TODO: remove next version
+    static final String NBT_ITEM_STORAGE_TRACKER_ID = "ItemStorageTrackerId";
+    static final String NBT_FLUID_STORAGE_TRACKER = "FluidStorageTracker"; // TODO: remove next version
+    static final String NBT_FLUID_STORAGE_TRACKER_ID = "FluidStorageTrackerId";
 
     @Nullable
     private IStorageDisk storage;
@@ -82,8 +84,10 @@ public class PortableGrid implements IGrid, IPortableGrid, IStorageDiskContainer
     private int tabPage;
     private int size;
 
-    private final ItemStorageTracker storageTracker = new ItemStorageTracker(() -> stack.getTag().put(NBT_STORAGE_TRACKER, getItemStorageTracker().serializeNbt()));
-    private final FluidStorageTracker fluidStorageTracker = new FluidStorageTracker(() -> stack.getTag().put(NBT_FLUID_STORAGE_TRACKER, getFluidStorageTracker().serializeNbt()));
+    private ItemStorageTracker itemStorageTracker;
+    private UUID itemStorageTrackerId;
+    private FluidStorageTracker fluidStorageTracker;
+    private UUID fluidStorageTrackerId;
 
     private final List<IFilter> filters = new ArrayList<>();
     private final List<IGridTab> tabs = new ArrayList<>();
@@ -150,14 +154,32 @@ public class PortableGrid implements IGrid, IPortableGrid, IStorageDiskContainer
         if (!stack.hasTag()) {
             stack.setTag(new CompoundNBT());
         }
+        if (player != null) { //baked model does not need a storage tracker
+            if (stack.getTag().contains(NBT_ITEM_STORAGE_TRACKER_ID)) {
+                itemStorageTrackerId = stack.getTag().getUniqueId(NBT_ITEM_STORAGE_TRACKER_ID);
+            } else {
+                if (stack.getTag().contains(NBT_STORAGE_TRACKER)) { //TODO: remove next version
+                    getItemStorageTracker().readFromNbt(stack.getTag().getList(NBT_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+                }
 
-        if (stack.getTag().contains(NBT_STORAGE_TRACKER)) {
-            storageTracker.readFromNbt(stack.getTag().getList(NBT_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+                UUID id = UUID.randomUUID();
+                stack.getTag().putUniqueId(NBT_ITEM_STORAGE_TRACKER_ID, id);
+                itemStorageTrackerId = id;
+            }
+
+            if (stack.getTag().contains(NBT_FLUID_STORAGE_TRACKER_ID)) {
+                fluidStorageTrackerId = stack.getTag().getUniqueId(NBT_FLUID_STORAGE_TRACKER_ID);
+            } else {
+                if (stack.getTag().contains(NBT_FLUID_STORAGE_TRACKER)) { //TODO: remove next version
+                    getFluidStorageTracker().readFromNbt(stack.getTag().getList(NBT_FLUID_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+                }
+
+                UUID id = UUID.randomUUID();
+                stack.getTag().putUniqueId(NBT_FLUID_STORAGE_TRACKER_ID, id);
+                fluidStorageTrackerId = id;
+            }
         }
 
-        if (stack.getTag().contains(NBT_FLUID_STORAGE_TRACKER)) {
-            fluidStorageTracker.readFromNbt(stack.getTag().getList(NBT_FLUID_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
-        }
 
         StackUtils.readItems(disk, 4, stack.getTag());
         StackUtils.readItems(filter, 0, stack.getTag());
@@ -368,11 +390,31 @@ public class PortableGrid implements IGrid, IPortableGrid, IStorageDiskContainer
 
     @Override
     public ItemStorageTracker getItemStorageTracker() {
-        return storageTracker;
+        if (itemStorageTracker == null) {
+            if (player != null) {
+                if (itemStorageTrackerId == null) {
+                    this.itemStorageTrackerId = UUID.randomUUID();
+                }
+
+                this.itemStorageTracker = (ItemStorageTracker) API.instance().getStorageTrackerManager((ServerWorld) player.world).getOrCreate(itemStorageTrackerId, StorageType.ITEM);
+            }
+        }
+
+        return itemStorageTracker;
     }
 
     @Override
     public FluidStorageTracker getFluidStorageTracker() {
+        if (fluidStorageTracker == null) {
+            if (player != null) {
+                if (fluidStorageTrackerId == null) {
+                    this.fluidStorageTrackerId = UUID.randomUUID();
+                }
+
+                this.fluidStorageTracker = (FluidStorageTracker) API.instance().getStorageTrackerManager((ServerWorld) player.world).getOrCreate(fluidStorageTrackerId, StorageType.FLUID);
+            }
+        }
+
         return fluidStorageTracker;
     }
 

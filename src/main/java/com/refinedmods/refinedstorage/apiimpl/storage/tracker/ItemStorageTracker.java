@@ -36,6 +36,7 @@ public class ItemStorageTracker implements IStorageTracker<ItemStack> {
         return changes.get(new ItemStackKey(stack));
     }
 
+    @Override
     public void readFromNbt(ListNBT list) {
         for (int i = 0; i < list.size(); ++i) {
             CompoundNBT tag = list.getCompound(i);
@@ -48,6 +49,7 @@ public class ItemStorageTracker implements IStorageTracker<ItemStack> {
         }
     }
 
+    @Override
     public ListNBT serializeNbt() {
         ListNBT list = new ListNBT();
 

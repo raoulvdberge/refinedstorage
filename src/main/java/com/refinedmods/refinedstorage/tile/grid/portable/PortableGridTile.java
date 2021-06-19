@@ -76,6 +76,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class PortableGridTile extends BaseTile implements ITickableTileEntity, IGrid, IPortableGrid, IRedstoneConfigurable, IStorageDiskContainerContext {
     public static final TileDataParameter<Integer, PortableGridTile> REDSTONE_MODE = RedstoneMode.createParameter();
@@ -114,8 +115,10 @@ public class PortableGridTile extends BaseTile implements ITickableTileEntity, I
         }
     });
 
-    private static final String NBT_STORAGE_TRACKER = "StorageTracker";
-    private static final String NBT_FLUID_STORAGE_TRACKER = "FluidStorageTracker";
+    private static final String NBT_STORAGE_TRACKER = "StorageTracker"; //TODO: remove next version
+    private static final String NBT_ITEM_STORAGE_TRACKER_ID = "ItemStorageTrackerId";
+    private static final String NBT_FLUID_STORAGE_TRACKER = "FluidStorageTracker"; //TODO: remove next version
+    private static final String NBT_FLUID_STORAGE_TRACKER_ID = "FluidStorageTrackerId";
     private static final String NBT_TYPE = "Type";
     private static final String NBT_ENERGY = "Energy";
     private static final String NBT_ENCHANTMENTS = "Enchantments"; // @Volatile: Minecraft specific nbt key, see EnchantmentHelper
@@ -166,8 +169,10 @@ public class PortableGridTile extends BaseTile implements ITickableTileEntity, I
     private PortableGridDiskState diskState = PortableGridDiskState.NONE;
     private boolean active;
 
-    private final ItemStorageTracker storageTracker = new ItemStorageTracker(this::markDirty);
-    private final FluidStorageTracker fluidStorageTracker = new FluidStorageTracker(this::markDirty);
+    private ItemStorageTracker itemStorageTracker;
+    private UUID itemStorageTrackerId;
+    private FluidStorageTracker fluidStorageTracker;
+    private UUID fluidStorageTrackerId;
 
     private ListNBT enchants = null;
 
@@ -246,13 +251,20 @@ public class PortableGridTile extends BaseTile implements ITickableTileEntity, I
             StackUtils.readItems(disk, 4, stack.getTag());
 
             this.redstoneMode = RedstoneMode.read(stack.getTag());
-
-            if (stack.getTag().contains(PortableGrid.NBT_STORAGE_TRACKER)) {
-                storageTracker.readFromNbt(stack.getTag().getList(PortableGrid.NBT_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+            if (stack.getTag().contains(PortableGrid.NBT_ITEM_STORAGE_TRACKER_ID)) {
+                itemStorageTrackerId = stack.getTag().getUniqueId(NBT_ITEM_STORAGE_TRACKER_ID);
+            } else {
+                if (stack.getTag().contains(PortableGrid.NBT_STORAGE_TRACKER)) { //TODO: remove next version
+                    getItemStorageTracker().readFromNbt(stack.getTag().getList(PortableGrid.NBT_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+                }
             }
 
-            if (stack.getTag().contains(PortableGrid.NBT_FLUID_STORAGE_TRACKER)) {
-                fluidStorageTracker.readFromNbt(stack.getTag().getList(PortableGrid.NBT_FLUID_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+            if (stack.getTag().contains(PortableGrid.NBT_FLUID_STORAGE_TRACKER_ID)) {
+                fluidStorageTrackerId = stack.getTag().getUniqueId(NBT_FLUID_STORAGE_TRACKER_ID);
+            } else {
+                if (stack.getTag().contains(PortableGrid.NBT_FLUID_STORAGE_TRACKER)) { //TODO: remove next version
+                    getFluidStorageTracker().readFromNbt(stack.getTag().getList(PortableGrid.NBT_FLUID_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+                }
             }
 
             if (stack.getTag().contains(NBT_ENCHANTMENTS)) {
@@ -273,8 +285,12 @@ public class PortableGridTile extends BaseTile implements ITickableTileEntity, I
         stack.getTag().putInt(GridNetworkNode.NBT_TAB_SELECTED, tabSelected);
         stack.getTag().putInt(GridNetworkNode.NBT_TAB_PAGE, tabPage);
 
-        stack.getTag().put(PortableGrid.NBT_STORAGE_TRACKER, storageTracker.serializeNbt());
-        stack.getTag().put(PortableGrid.NBT_FLUID_STORAGE_TRACKER, fluidStorageTracker.serializeNbt());
+        if (itemStorageTrackerId != null) {
+            stack.getTag().putUniqueId(PortableGrid.NBT_ITEM_STORAGE_TRACKER_ID, itemStorageTrackerId);
+        }
+        if (fluidStorageTrackerId != null) {
+            stack.getTag().putUniqueId(PortableGrid.NBT_FLUID_STORAGE_TRACKER_ID, fluidStorageTrackerId);
+        }
 
         if (enchants != null) {
             stack.getTag().put(NBT_ENCHANTMENTS, enchants);
@@ -465,11 +481,27 @@ public class PortableGridTile extends BaseTile implements ITickableTileEntity, I
 
     @Override
     public IStorageTracker<ItemStack> getItemStorageTracker() {
-        return storageTracker;
+        if (itemStorageTracker == null) {
+            if (itemStorageTrackerId == null) {
+                this.itemStorageTrackerId = UUID.randomUUID();
+            }
+
+            this.itemStorageTracker = (ItemStorageTracker) API.instance().getStorageTrackerManager((ServerWorld) world).getOrCreate(itemStorageTrackerId, StorageType.ITEM);
+        }
+
+        return itemStorageTracker;
     }
 
     @Override
     public IStorageTracker<FluidStack> getFluidStorageTracker() {
+        if (fluidStorageTracker == null) {
+            if (fluidStorageTrackerId == null) {
+                this.fluidStorageTrackerId = UUID.randomUUID();
+            }
+
+            this.fluidStorageTracker = (FluidStorageTracker) API.instance().getStorageTrackerManager((ServerWorld) world).getOrCreate(fluidStorageTrackerId, StorageType.FLUID);
+        }
+
         return fluidStorageTracker;
     }
 
@@ -642,8 +674,12 @@ public class PortableGridTile extends BaseTile implements ITickableTileEntity, I
 
         redstoneMode.write(tag);
 
-        tag.put(NBT_STORAGE_TRACKER, storageTracker.serializeNbt());
-        tag.put(NBT_FLUID_STORAGE_TRACKER, fluidStorageTracker.serializeNbt());
+        if (itemStorageTrackerId != null) {
+            tag.putUniqueId(NBT_ITEM_STORAGE_TRACKER_ID, itemStorageTrackerId);
+        }
+        if (fluidStorageTrackerId != null) {
+            tag.putUniqueId(NBT_FLUID_STORAGE_TRACKER_ID, fluidStorageTrackerId);
+        }
 
         if (enchants != null) {
             tag.put(NBT_ENCHANTMENTS, enchants);
@@ -689,12 +725,20 @@ public class PortableGridTile extends BaseTile implements ITickableTileEntity, I
 
         redstoneMode = RedstoneMode.read(tag);
 
-        if (tag.contains(NBT_STORAGE_TRACKER)) {
-            storageTracker.readFromNbt(tag.getList(NBT_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+        if (tag.contains(NBT_ITEM_STORAGE_TRACKER_ID)) {
+            itemStorageTrackerId = tag.getUniqueId(NBT_ITEM_STORAGE_TRACKER_ID);
+        } else {
+            if (tag.contains(NBT_STORAGE_TRACKER)) { //TODO: remove next version
+                getItemStorageTracker().readFromNbt(tag.getList(NBT_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+            }
         }
 
-        if (tag.contains(NBT_FLUID_STORAGE_TRACKER)) {
-            fluidStorageTracker.readFromNbt(tag.getList(NBT_FLUID_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+        if (tag.contains(NBT_FLUID_STORAGE_TRACKER_ID)) {
+            fluidStorageTrackerId = tag.getUniqueId(NBT_FLUID_STORAGE_TRACKER_ID);
+        } else {
+            if (tag.contains(NBT_FLUID_STORAGE_TRACKER)) { //TODO: remove next version
+                getFluidStorageTracker().readFromNbt(tag.getList(NBT_FLUID_STORAGE_TRACKER, Constants.NBT.TAG_COMPOUND));
+            }
         }
 
         if (tag.contains(NBT_ENCHANTMENTS)) {

@@ -18,6 +18,7 @@ import com.refinedmods.refinedstorage.api.storage.disk.IStorageDiskManager;
 import com.refinedmods.refinedstorage.api.storage.disk.IStorageDiskRegistry;
 import com.refinedmods.refinedstorage.api.storage.disk.IStorageDiskSync;
 import com.refinedmods.refinedstorage.api.storage.externalstorage.IExternalStorageProvider;
+import com.refinedmods.refinedstorage.api.storage.tracker.IStorageTrackerManager;
 import com.refinedmods.refinedstorage.api.util.IComparer;
 import com.refinedmods.refinedstorage.api.util.IQuantityFormatter;
 import com.refinedmods.refinedstorage.api.util.IStackList;
@@ -137,6 +138,12 @@ public interface IRSAPI {
      */
     @Nonnull
     IStorageDiskSync getStorageDiskSync();
+
+    /**
+     * @return the storage tracker manager
+     */
+    @Nonnull
+    IStorageTrackerManager getStorageTrackerManager(ServerWorld anyWorld);
 
     /**
      * Adds an external storage provider for the given storage type.
