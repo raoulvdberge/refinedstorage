@@ -1,5 +1,6 @@
 package com.refinedmods.refinedstorage.apiimpl.network.grid;
 
+import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPattern;
 import com.refinedmods.refinedstorage.api.network.INetwork;
 import com.refinedmods.refinedstorage.api.network.grid.GridType;
 import com.refinedmods.refinedstorage.api.network.grid.ICraftingGridBehavior;
@@ -10,9 +11,11 @@ import com.refinedmods.refinedstorage.api.util.IComparer;
 import com.refinedmods.refinedstorage.api.util.IStackList;
 import com.refinedmods.refinedstorage.apiimpl.API;
 import com.refinedmods.refinedstorage.apiimpl.network.node.GridNetworkNode;
+import com.refinedmods.refinedstorage.item.PatternItem;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.inventory.InventoryHelper;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.ICraftingRecipe;
 import net.minecraft.util.NonNullList;
@@ -21,8 +24,8 @@ import net.minecraftforge.fml.hooks.BasicEventHooks;
 import net.minecraftforge.items.ItemHandlerHelper;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class CraftingGridBehavior implements ICraftingGridBehavior {
     @Override
@@ -188,10 +191,17 @@ public class CraftingGridBehavior implements ICraftingGridBehavior {
             }
         }
 
+        AtomicReference<Map<Item, ItemStack>> playerItems = new AtomicReference<>();
         // Now let's fill the matrix
         for (int i = 0; i < grid.getCraftingMatrix().getSizeInventory(); ++i) {
             if (recipe[i] != null) {
                 ItemStack[] possibilities = recipe[i];
+
+                if (network != null && grid.isGridActive() && network.getItemStorageCache() != null) {
+
+                    // sort by the number of items in storage, craftables and inventory
+                    Arrays.sort(possibilities, compareByItemStackCounts(player, network, playerItems));
+                }
 
                 // If we are a crafting grid
                 if (grid.getGridType() == GridType.CRAFTING) {
@@ -246,4 +256,51 @@ public class CraftingGridBehavior implements ICraftingGridBehavior {
             ((GridNetworkNode) grid).markDirty();
         }
     }
+
+    private Comparator<ItemStack> compareByItemStackCounts(PlayerEntity player, INetwork network, AtomicReference<Map<Item, ItemStack>> playerItems) {
+        return Comparator.comparingInt((ItemStack itemStack) -> {
+
+            ItemStack stack = network.getItemStorageCache().getList().get(itemStack);
+            if (stack != null) {
+                return stack.getCount();
+            }
+
+            if (network.getCraftingManager().getPattern(itemStack) != null) {
+                return 1;
+            }
+
+            if (playerItems.get() == null) {
+                playerItems.set(makePlayerInventoryMap(player, network));
+            }
+
+            ItemStack onPlayer = playerItems.get().get(itemStack.getItem());
+            if (onPlayer != null) {
+                return onPlayer.getCount();
+            }
+            return 0;
+        }).reversed();
+    }
+
+    private Map<Item, ItemStack> makePlayerInventoryMap(PlayerEntity player, INetwork network) {
+        Map<Item, ItemStack> playerItems = new HashMap<>();
+        for (int j = 0; j < player.inventory.getSizeInventory(); j++) {
+            ItemStack inventoryStack = player.inventory.getStackInSlot(j);
+
+            if (inventoryStack.getItem() instanceof PatternItem) {
+                ICraftingPattern pattern = PatternItem.fromCache(network.getWorld(), inventoryStack);
+                if (pattern.isValid()) {
+                    for (ItemStack stack : pattern.getOutputs()) {
+                        if (!stack.isEmpty()) {
+                            playerItems.put(stack.getItem(), stack);
+                        }
+                    }
+                }
+            } else {
+                playerItems.put(inventoryStack.getItem(), inventoryStack);
+            }
+        }
+
+        return playerItems;
+    }
+
 }
