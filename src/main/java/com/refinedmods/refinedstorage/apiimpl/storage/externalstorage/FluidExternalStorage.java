@@ -117,19 +117,7 @@ public class FluidExternalStorage implements IExternalStorage<FluidStack> {
 
     @Override
     public int getStored() {
-        IFluidHandler fluidHandler = handlerSupplier.get();
-
-        if (fluidHandler != null) {
-            int stored = 0;
-
-            for (int i = 0; i < fluidHandler.getTanks(); ++i) {
-                stored += fluidHandler.getFluidInTank(i).getAmount();
-            }
-
-            return stored;
-        }
-
-        return 0;
+        return cache.getStored();
     }
 
     @Override

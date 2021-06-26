@@ -12,24 +12,36 @@ import java.util.List;
 
 public class FluidExternalStorageCache {
     private List<FluidStack> cache;
+    private int stored = 0;
+
+    public int getStored() {
+        return stored;
+    }
 
     public void update(INetwork network, @Nullable IFluidHandler handler) {
         if (handler == null) {
+            stored = 0;
             return;
         }
 
         if (cache == null) {
             cache = new ArrayList<>();
 
+            int stored = 0;
             for (int i = 0; i < handler.getTanks(); ++i) {
-                cache.add(handler.getFluidInTank(i).copy());
+                FluidStack stack = handler.getFluidInTank(i).copy();
+                cache.add(stack);
+                stored += stack.getAmount();
             }
+            this.stored = stored;
 
             return;
         }
 
+        int stored = 0;
         for (int i = 0; i < handler.getTanks(); ++i) {
             FluidStack actual = handler.getFluidInTank(i);
+            stored += actual.getAmount();
 
             if (i >= cache.size()) { // ENLARGED
                 if (!actual.isEmpty()) {
@@ -70,6 +82,7 @@ public class FluidExternalStorageCache {
                 cached.setAmount(actual.getAmount());
             }
         }
+        this.stored = stored;
 
         if (cache.size() > handler.getTanks()) { // SHRUNK
             for (int i = cache.size() - 1; i >= handler.getTanks(); --i) { // Reverse order for the remove call.

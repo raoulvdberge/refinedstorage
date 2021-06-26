@@ -137,19 +137,7 @@ public class ItemExternalStorage implements IExternalStorage<ItemStack> {
 
     @Override
     public int getStored() {
-        IItemHandler handler = handlerSupplier.get();
-
-        if (handler == null) {
-            return 0;
-        }
-
-        int size = 0;
-
-        for (int i = 0; i < handler.getSlots(); ++i) {
-            size += handler.getStackInSlot(i).getCount();
-        }
-
-        return size;
+        return cache.getStored();
     }
 
     @Override
