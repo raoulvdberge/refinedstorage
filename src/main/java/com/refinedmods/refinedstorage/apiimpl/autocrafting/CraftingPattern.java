@@ -1,10 +1,17 @@
 package com.refinedmods.refinedstorage.apiimpl.autocrafting;
 
+import java.util.List;
+import java.util.UUID;
+
+import javax.annotation.Nullable;
+
 import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPattern;
 import com.refinedmods.refinedstorage.api.autocrafting.ICraftingPatternContainer;
 import com.refinedmods.refinedstorage.api.util.IComparer;
 import com.refinedmods.refinedstorage.apiimpl.API;
 import com.refinedmods.refinedstorage.apiimpl.autocrafting.task.v6.CraftingTaskFactory;
+import com.refinedmods.refinedstorage.item.PatternItem;
+
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.inventory.container.Container;
@@ -14,9 +21,6 @@ import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraftforge.fluids.FluidStack;
-
-import javax.annotation.Nullable;
-import java.util.List;
 
 public class CraftingPattern implements ICraftingPattern {
     private final CraftingPatternContext context;
@@ -89,7 +93,7 @@ public class CraftingPattern implements ICraftingPattern {
             throw new IllegalArgumentException("The items that are taken (" + took.size() + ") should match the inputs for this pattern (" + inputs.getInputs().size() + ")");
         }
 
-        CraftingInventory inv = new DummyCraftingInventory();
+        CraftingInventory inv = new DummyCraftingInventory(this.context);
 
         for (int i = 0; i < took.size(); ++i) {
             inv.setInventorySlotContents(i, took.get(i));
@@ -122,7 +126,7 @@ public class CraftingPattern implements ICraftingPattern {
             throw new IllegalArgumentException("The items that are taken (" + took.size() + ") should match the inputs for this pattern (" + inputs.getInputs().size() + ")");
         }
 
-        CraftingInventory inv = new DummyCraftingInventory();
+        CraftingInventory inv = new DummyCraftingInventory(this.context);
 
         for (int i = 0; i < took.size(); ++i) {
             inv.setInventorySlotContents(i, took.get(i));
@@ -265,14 +269,20 @@ public class CraftingPattern implements ICraftingPattern {
         return result;
     }
 
-    public static class DummyCraftingInventory extends CraftingInventory {
-        public DummyCraftingInventory() {
+    public static class DummyCraftingInventory extends CraftingInventory 
+    {
+        public final CraftingPatternContext context;
+        public final UUID requester;
+        
+        public DummyCraftingInventory(CraftingPatternContext context) {
             super(new Container(null, 0) {
                 @Override
                 public boolean canInteractWith(PlayerEntity player) {
                     return true;
                 }
             }, 3, 3);
+            this.context = context;
+            this.requester = PatternItem.getPatternCreator(context.getStack());
         }
     }
 }

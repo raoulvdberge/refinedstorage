@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class PatternItem extends Item implements ICraftingPatternProvider {
@@ -46,6 +47,7 @@ public class PatternItem extends Item implements ICraftingPatternProvider {
     private static final String NBT_EXACT = "Exact";
     private static final String NBT_PROCESSING = "Processing";
     private static final String NBT_ALLOWED_TAGS = "AllowedTags";
+    private static final String NBT_PATTERN_CREATOR = "PatternCreator";
 
     private static final int VERSION = 1;
 
@@ -278,5 +280,20 @@ public class PatternItem extends Item implements ICraftingPatternProvider {
         allowedTagList.readFromNbt(pattern.getTag().getCompound(NBT_ALLOWED_TAGS));
 
         return allowedTagList;
+    }
+    
+    @Nullable
+    public static UUID getPatternCreator(ItemStack pattern) {
+        if (!pattern.hasTag() || !pattern.getTag().contains(NBT_PATTERN_CREATOR)) {
+            return null;
+        }
+        return pattern.getTag().getUniqueId(NBT_PATTERN_CREATOR);
+    }
+    
+    public static void setPatternCreator(ItemStack pattern, UUID creator) {
+        if (!pattern.hasTag()) {
+                pattern.setTag(new CompoundNBT());
+        }
+        pattern.getTag().putUniqueId(NBT_PATTERN_CREATOR, creator);
     }
 }

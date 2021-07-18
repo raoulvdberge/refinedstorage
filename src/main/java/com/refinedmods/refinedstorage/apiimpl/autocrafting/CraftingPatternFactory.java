@@ -48,7 +48,7 @@ public class CraftingPatternFactory {
                     throw new CraftingPatternFactoryException(new TranslationTextComponent("misc.refinedstorage.pattern.error.processing_no_outputs"));
                 }
             } else {
-                CraftingInventory inv = new CraftingPattern.DummyCraftingInventory();
+                CraftingInventory inv = new CraftingPattern.DummyCraftingInventory(context);
 
                 for (int i = 0; i < 9; ++i) {
                     fillCraftingInputs(inv, stack, inputs, i);

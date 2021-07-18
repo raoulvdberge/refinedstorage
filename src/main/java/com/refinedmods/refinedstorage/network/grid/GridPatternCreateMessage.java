@@ -3,6 +3,7 @@ package com.refinedmods.refinedstorage.network.grid;
 import com.refinedmods.refinedstorage.api.network.grid.GridType;
 import com.refinedmods.refinedstorage.tile.grid.GridTile;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
@@ -26,14 +27,14 @@ public class GridPatternCreateMessage {
     }
 
     public static void handle(GridPatternCreateMessage message, Supplier<NetworkEvent.Context> ctx) {
-        PlayerEntity player = ctx.get().getSender();
+        ServerPlayerEntity player = ctx.get().getSender();
 
         if (player != null) {
             ctx.get().enqueueWork(() -> {
                 TileEntity tile = player.getEntityWorld().getTileEntity(message.pos);
 
                 if (tile instanceof GridTile && ((GridTile) tile).getNode().getGridType() == GridType.PATTERN) {
-                    ((GridTile) tile).getNode().onCreatePattern();
+                    ((GridTile) tile).getNode().onCreatePattern(player);
                 }
             });
         }
